@@ -697,7 +697,7 @@ class TaskConfig:
             )
 
     async def proceed_auto_merge(self, dl_path, gid):
-        auto_merge = self.user_dict.get("AUTO_MERGE", False)
+        auto_merge = getattr(self, "auto_merge", False) or self.user_dict.get("AUTO_MERGE", False)
         if not auto_merge:
             return dl_path
         video_files = []

@@ -118,6 +118,7 @@ def arg_parser(items, arg_base):
         "-ad",
         "-tb",
         "-bh",
+        "-merge",
     }
 
     while i < total:

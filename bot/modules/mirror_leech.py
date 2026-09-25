@@ -117,6 +117,7 @@ class Mirror(TaskListener):
             "-ut": False,
             "-ad": False,
             "-tb": False,
+            "-merge": False,
             "-i": 0,
             "-sp": 0,
             "link": "",
@@ -165,6 +166,7 @@ class Mirror(TaskListener):
         self.user_trans = args["-ut"]
         self.is_alldebrid = args["-ad"]
         self.is_torbox = args["-tb"]
+        self.auto_merge = args["-merge"]
         self.ffmpeg_cmds = args["-ff"]
 
         headers = args["-h"]
