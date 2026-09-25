@@ -8,19 +8,21 @@ class ButtonMaker:
         self._header_button = []
         self._footer_button = []
 
+    def _parse_style(self, style):
+        if isinstance(style, str):
+            st = style.lower()
+            if st in ["red", "danger"]:
+                return ButtonStyle.DANGER
+            elif st in ["green", "success"]:
+                return ButtonStyle.SUCCESS
+            elif st in ["blue", "primary"]:
+                return ButtonStyle.PRIMARY
+            elif st in ["default", "grey", "gray"]:
+                return ButtonStyle.DEFAULT
+        return style
+
     def url_button(self, key, link, position=None, style=ButtonStyle.DEFAULT):
-        if style not in [
-            ButtonStyle.DEFAULT,
-            ButtonStyle.PRIMARY,
-            ButtonStyle.DANGER,
-            ButtonStyle.SUCCESS,
-        ]:
-            if style.lower() == "blue":
-                style = ButtonStyle.PRIMARY
-            elif style.lower() == "red":
-                style = ButtonStyle.DANGER
-            elif style.lower() == "green":
-                style = ButtonStyle.SUCCESS
+        style = self._parse_style(style)
         if not position:
             self._button.append(InlineKeyboardButton(text=key, url=link, style=style))
         elif position == "header":
@@ -33,18 +35,7 @@ class ButtonMaker:
             )
 
     def data_button(self, key, data, position=None, style=ButtonStyle.DEFAULT):
-        if style not in [
-            ButtonStyle.DEFAULT,
-            ButtonStyle.PRIMARY,
-            ButtonStyle.DANGER,
-            ButtonStyle.SUCCESS,
-        ]:
-            if style.lower() == "blue":
-                style = ButtonStyle.PRIMARY
-            elif style.lower() == "red":
-                style = ButtonStyle.DANGER
-            elif style.lower() == "green":
-                style = ButtonStyle.SUCCESS
+        style = self._parse_style(style)
         if not position:
             self._button.append(
                 InlineKeyboardButton(text=key, callback_data=data, style=style)

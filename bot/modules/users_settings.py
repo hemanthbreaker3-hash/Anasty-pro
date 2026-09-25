@@ -212,8 +212,8 @@ async def get_user_settings(from_user, stype="main"):
         cap_font = user_dict.get("CAPTION_FONT", "Monospace") or "Monospace"
         buttons.data_button("Caption Font", f"userset {user_id} menu CAPTION_FONT")
 
-        buttons.data_button("Back", f"userset {user_id} back")
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Back", f"userset {user_id} back", style="primary")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
 
         text = f"""<u>Leech Settings for {name}</u>
 Leech Type is <b>{ltype}</b>
@@ -238,8 +238,8 @@ Caption Font is <b>{cap_font.title()}</b>
             "Default Rclone Path", f"userset {user_id} menu RCLONE_PATH"
         )
         buttons.data_button("Rclone Flags", f"userset {user_id} menu RCLONE_FLAGS")
-        buttons.data_button("Back", f"userset {user_id} back")
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Back", f"userset {user_id} back", style="primary")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
         rccmsg = "Exists" if await aiopath.exists(rclone_conf) else "Not Exists"
         if user_dict.get("RCLONE_PATH", False):
             rccpath = user_dict["RCLONE_PATH"]
@@ -267,16 +267,16 @@ Rclone Flags is <code>{rcflags}</code>"""
             and Config.STOP_DUPLICATE
         ):
             buttons.data_button(
-                "Disable Stop Duplicate", f"userset {user_id} tog STOP_DUPLICATE f"
+                "Disable Stop Duplicate", f"userset {user_id} tog STOP_DUPLICATE f", style="danger"
             )
             sd_msg = "Enabled"
         else:
             buttons.data_button(
-                "Enable Stop Duplicate", f"userset {user_id} tog STOP_DUPLICATE t"
+                "Enable Stop Duplicate", f"userset {user_id} tog STOP_DUPLICATE t", style="success"
             )
             sd_msg = "Disabled"
-        buttons.data_button("Back", f"userset {user_id} back")
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Back", f"userset {user_id} back", style="primary")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
         tokenmsg = "Exists" if await aiopath.exists(token_pickle) else "Not Exists"
         if user_dict.get("GDRIVE_ID", False):
             gdrive_id = user_dict["GDRIVE_ID"]
@@ -293,21 +293,21 @@ Stop Duplicate is <b>{sd_msg}</b>"""
     elif stype == "vtools":
         auto_merge = user_dict.get("AUTO_MERGE", False)
         if auto_merge:
-            buttons.data_button("Disable Auto Merge", f"userset {user_id} tog AUTO_MERGE f")
+            buttons.data_button("Disable Auto Merge", f"userset {user_id} tog AUTO_MERGE f", style="danger")
             keep_orig = user_dict.get("KEEP_ORIGINAL", False)
             if keep_orig:
-                buttons.data_button("Disable Keep Original", f"userset {user_id} tog KEEP_ORIGINAL f")
+                buttons.data_button("Disable Keep Original", f"userset {user_id} tog KEEP_ORIGINAL f", style="danger")
             else:
-                buttons.data_button("Enable Keep Original", f"userset {user_id} tog KEEP_ORIGINAL t")
+                buttons.data_button("Enable Keep Original", f"userset {user_id} tog KEEP_ORIGINAL t", style="success")
             am_msg = "Enabled"
             ko_msg = "Enabled" if keep_orig else "Disabled"
         else:
-            buttons.data_button("Enable Auto Merge", f"userset {user_id} tog AUTO_MERGE t")
+            buttons.data_button("Enable Auto Merge", f"userset {user_id} tog AUTO_MERGE t", style="success")
             am_msg = "Disabled"
             ko_msg = "N/A"
 
-        buttons.data_button("Back", f"userset {user_id} back")
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Back", f"userset {user_id} back", style="primary")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
 
         metadata_text = user_dict.get("METADATA_TEXT", "") or Config.METADATA_TEXT or "None"
         buttons.data_button("Metadata", f"userset {user_id} menu METADATA_TEXT")
@@ -323,8 +323,8 @@ Metadata is <code>{metadata_text}</code>"""
         buttons.data_button(
             "Buzzheavier Folder ID", f"userset {user_id} menu BUZZHEAVIER_FOLDER_ID"
         )
-        buttons.data_button("Back", f"userset {user_id} back")
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Back", f"userset {user_id} back", style="primary")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
         if user_dict.get("BUZZHEAVIER_ACCOUNT_ID", False):
             bh_acc = user_dict["BUZZHEAVIER_ACCOUNT_ID"]
         else:
@@ -429,9 +429,9 @@ Buzzheavier Folder ID: {bh_fol}"""
             ffc = "None"
 
         if user_dict:
-            buttons.data_button("Reset All", f"userset {user_id} reset all")
+            buttons.data_button("Reset All", f"userset {user_id} reset all", style="danger")
 
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
 
         text = f"""<u>Settings for {name}</u>
 Default Package is <b>{du}</b>
@@ -586,8 +586,8 @@ async def get_menu(option, message, user_id):
         ]
         for font_name, font_key in font_options:
             buttons.data_button(font_name, f"userset {user_id} setcapfont {font_key}")
-        buttons.data_button("Back", f"userset {user_id} leech")
-        buttons.data_button("Close", f"userset {user_id} close")
+        buttons.data_button("Back", f"userset {user_id} leech", style="primary")
+        buttons.data_button("Close", f"userset {user_id} close", style="danger")
         text = "Select Caption Font/Style for Telegram uploads:"
         await edit_message(message, text, buttons.build_menu(2))
         return
@@ -605,8 +605,8 @@ async def get_menu(option, message, user_id):
         next_src = "filecaption" if ns_src == "title" else "title"
         buttons.data_button(f"Name Source ({ns_src.title()})", f"userset {user_id} namesource {next_src}")
     if option in user_dict and key != "file":
-        buttons.data_button("Reset", f"userset {user_id} reset {option}")
-    buttons.data_button("Remove", f"userset {user_id} remove {option}")
+        buttons.data_button("Reset", f"userset {user_id} reset {option}", style="danger")
+    buttons.data_button("Remove", f"userset {user_id} remove {option}", style="danger")
     if option == "FFMPEG_CMDS":
         ffc = None
         if user_dict.get("FFMPEG_CMDS", False):
@@ -634,8 +634,8 @@ async def get_menu(option, message, user_id):
         back_to = "uploaders"
     else:
         back_to = "back"
-    buttons.data_button("Back", f"userset {user_id} {back_to}")
-    buttons.data_button("Close", f"userset {user_id} close")
+    buttons.data_button("Back", f"userset {user_id} {back_to}", style="primary")
+    buttons.data_button("Close", f"userset {user_id} close", style="danger")
     text = f"Edit menu for: {option}"
     await edit_message(message, text, buttons.build_menu(2))
 
