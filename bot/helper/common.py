@@ -29,7 +29,7 @@ from .. import (
 )
 from ..core.config_manager import Config
 from ..core.telegram_manager import TgClient
-from .ext_utils.bot_utils import new_task, sync_to_async, get_size_bytes
+from .ext_utils.bot_utils import new_task, sync_to_async, get_size_bytes, cmd_exec
 from .ext_utils.bulk_links import extract_bulk_links
 from .mirror_leech_utils.gdrive_utils.list import GoogleDriveList
 from .mirror_leech_utils.rclone_utils.list import RcloneList
@@ -248,34 +248,43 @@ class TaskConfig:
             if self.up_dest in Config.UPLOAD_PATHS:
                 self.up_dest = Config.UPLOAD_PATHS[self.up_dest]
 
-        if self.ffmpeg_cmds:
-            if self.user_dict.get("FFMPEG_CMDS", None):
-                ffmpeg_dict = deepcopy(self.user_dict["FFMPEG_CMDS"])
-            elif (
-                "FFMPEG_CMDS" not in self.user_dict or not self.user_dict["FFMPEG_CMDS"]
-            ) and Config.FFMPEG_CMDS:
-                ffmpeg_dict = deepcopy(Config.FFMPEG_CMDS)
+        ffmpeg_dict = None
+        if self.user_dict.get("FFMPEG_CMDS", None):
+            ffmpeg_dict = deepcopy(self.user_dict["FFMPEG_CMDS"])
+        elif (
+            "FFMPEG_CMDS" not in self.user_dict or not self.user_dict["FFMPEG_CMDS"]
+        ) and Config.FFMPEG_CMDS:
+            ffmpeg_dict = deepcopy(Config.FFMPEG_CMDS)
+
+        if ffmpeg_dict:
+            if not self.ffmpeg_cmds:
+                keys_to_process = list(ffmpeg_dict.keys())
             else:
-                ffmpeg_dict = None
+                keys_to_process = list(self.ffmpeg_cmds)
+            cmds = []
+            for key in keys_to_process:
+                if isinstance(key, tuple):
+                    cmds.extend(list(key))
+                elif key in ffmpeg_dict:
+                    for ind, vl in enumerate(ffmpeg_dict[key]):
+                        if variables := set(findall(r"\{(.*?)\}", vl)):
+                            ff_values = (
+                                self.user_dict.get("FFMPEG_VARIABLES", {})
+                                .get(key, {})
+                                .get(str(ind), {})
+                            )
+                            if Counter(list(variables)) == Counter(
+                                list(ff_values.keys())
+                            ):
+                                cmds.append(vl.format(**ff_values))
+                        else:
+                            cmds.append(vl)
+            self.ffmpeg_cmds = cmds
+        elif self.ffmpeg_cmds:
             cmds = []
             for key in list(self.ffmpeg_cmds):
                 if isinstance(key, tuple):
                     cmds.extend(list(key))
-                elif ffmpeg_dict is not None:
-                    if key in ffmpeg_dict.keys():
-                        for ind, vl in enumerate(ffmpeg_dict[key]):
-                            if variables := set(findall(r"\{(.*?)\}", vl)):
-                                ff_values = (
-                                    self.user_dict.get("FFMPEG_VARIABLES", {})
-                                    .get(key, {})
-                                    .get(str(ind), {})
-                                )
-                                if Counter(list(variables)) == Counter(
-                                    list(ff_values.keys())
-                                ):
-                                    cmds.append(vl.format(**ff_values))
-                            else:
-                                cmds.append(vl)
             self.ffmpeg_cmds = cmds
 
         default_upload = (
@@ -735,7 +744,7 @@ class TaskConfig:
         async with task_dict_lock:
             task_dict[self.mid] = FFmpegStatus(self, ffmpeg, gid, "Merge")
 
-        temp_out = ospath.join(base_folder, "mltb.mkv")
+        temp_out = ospath.join(base_folder, "mltb_merge_output.mkv")
 
         cmd = [
             "taskset",
@@ -845,9 +854,14 @@ class TaskConfig:
 
         media_files = []
         is_file = await aiopath.isfile(dl_path)
+        media_exts = (
+            ".mkv", ".mp4", ".webm", ".avi", ".mov", ".flv", ".m4v",
+            ".ts", ".m2ts", ".mp3", ".flac", ".wav", ".m4a", ".aac",
+            ".opus", ".ogg"
+        )
         if is_file:
             is_video, is_audio, _ = await get_document_type(dl_path)
-            if is_video or is_audio:
+            if is_video or is_audio or dl_path.lower().endswith(media_exts):
                 media_files.append(dl_path)
         else:
             walk_data = await sync_to_async(lambda: list(walk(dl_path, topdown=False)))
@@ -855,7 +869,7 @@ class TaskConfig:
                 for file_ in natsorted(files):
                     f_path = ospath.join(dirpath, file_)
                     is_video, is_audio, _ = await get_document_type(f_path)
-                    if is_video or is_audio:
+                    if is_video or is_audio or f_path.lower().endswith(media_exts):
                         media_files.append(f_path)
 
         if not media_files:
@@ -876,6 +890,50 @@ class TaskConfig:
 
                 dir_name, file_name = ospath.split(f_path)
                 temp_file = ospath.join(dir_name, f"mltb_meta_{file_name}")
+
+                v_count, a_count, s_count, d_count, t_count = 0, 0, 0, 0, 0
+                try:
+                    stdout, _, code = await cmd_exec(
+                        [
+                            "ffprobe",
+                            "-hide_banner",
+                            "-loglevel",
+                            "error",
+                            "-print_format",
+                            "json",
+                            "-show_streams",
+                            f_path,
+                        ]
+                    )
+                    if code == 0 and stdout:
+                        from json import loads
+                        streams_data = loads(stdout).get("streams", [])
+                        for st in streams_data:
+                            ctype = st.get("codec_type", "").lower()
+                            if ctype == "video":
+                                v_count += 1
+                            elif ctype == "audio":
+                                a_count += 1
+                            elif ctype == "subtitle":
+                                s_count += 1
+                            elif ctype == "data":
+                                d_count += 1
+                            elif ctype == "attachment":
+                                t_count += 1
+                except Exception as e:
+                    LOGGER.error(f"Failed to get stream count in proceed_metadata: {e}")
+
+                stream_metadata_args = []
+                for idx in range(max(v_count, 1 if v_count else 0)):
+                    stream_metadata_args.extend([f"-metadata:s:v:{idx}", f"title={metadata_text}"])
+                for idx in range(a_count):
+                    stream_metadata_args.extend([f"-metadata:s:a:{idx}", f"title={metadata_text}"])
+                for idx in range(s_count):
+                    stream_metadata_args.extend([f"-metadata:s:s:{idx}", f"title={metadata_text}"])
+                for idx in range(d_count):
+                    stream_metadata_args.extend([f"-metadata:s:d:{idx}", f"title={metadata_text}"])
+                for idx in range(t_count):
+                    stream_metadata_args.extend([f"-metadata:s:t:{idx}", f"title={metadata_text}"])
 
                 cmd = [
                     "taskset",
@@ -921,6 +979,7 @@ class TaskConfig:
                     f"title={metadata_text}",
                     "-metadata:s:t",
                     f"title={metadata_text}",
+                ] + stream_metadata_args + [
                     "-threads",
                     f"{threads}",
                     temp_file,
@@ -991,7 +1050,17 @@ class TaskConfig:
                             self.is_cancelled = True
         if self.proceed_count == 0:
             LOGGER.info("No files able to extract!")
-        return t_path if self.is_file and code == 0 else dl_path
+        res_path = t_path if self.is_file and code == 0 else dl_path
+        if code == 0 and await aiopath.exists(res_path) and await aiopath.isdir(res_path):
+            try:
+                items = await listdir(res_path)
+                if len(items) == 1:
+                    single_item = ospath.join(res_path, items[0])
+                    if await aiopath.isfile(single_item):
+                        res_path = single_item
+            except Exception:
+                pass
+        return res_path
 
     async def proceed_ffmpeg(self, dl_path, gid):
         checked = False

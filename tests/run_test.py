@@ -133,6 +133,7 @@ def _clean_caption_name(caption, original_filename=""):
 
 bot_utils_mod.clean_caption_name = _clean_caption_name
 
+
 task_manager_mod = ModuleType("bot.helper.ext_utils.task_manager")
 task_manager_mod.check_running_tasks = lambda *args, **kwargs: (False, None)
 task_manager_mod.stop_duplicate_check = lambda *args, **kwargs: (None, None)

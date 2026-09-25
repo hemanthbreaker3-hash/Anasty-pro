@@ -163,12 +163,18 @@ class Mirror(TaskListener):
         self.thumbnail_layout = args["-tl"]
         self.as_doc = args["-doc"]
         self.as_med = args["-med"]
-        self.folder_name = f"/{args["-m"]}".rstrip("/") if len(args["-m"]) > 0 else ""
+        self.folder_name = (
+            f"/{args['-m']}".rstrip("/")
+            if isinstance(args["-m"], str) and len(args["-m"]) > 0
+            else ""
+        )
         self.bot_trans = args["-bt"]
         self.user_trans = args["-ut"]
         self.is_alldebrid = args["-ad"]
         self.is_torbox = args["-tb"]
-        self.auto_merge = args["-merge"] or args["-m"]
+        self.auto_merge = args["-merge"] or (
+            isinstance(args["-m"], bool) and args["-m"]
+        )
         self.ffmpeg_cmds = args["-ff"]
 
         headers = args["-h"]
