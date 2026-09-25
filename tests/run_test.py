@@ -70,7 +70,7 @@ status_utils_mod = ModuleType("bot.helper.ext_utils.status_utils")
 
 
 class MirrorStatus:
-    STATUS_DOWNLOAD = "Download"
+    STATUS_DOWNLOAD = "Downloading"
 
 
 status_utils_mod.MirrorStatus = MirrorStatus

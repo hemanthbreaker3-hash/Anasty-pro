@@ -486,6 +486,19 @@ see [Using Service Accounts](https://github.com/anasty17/mirror-leech-telegram-b
 <details>
   <summary><h2>Build And Run</h2></summary>
 
+### VPS Deployment (One-Click `deploy.vps` Script)
+
+For quick deployment on Ubuntu/Debian VPS servers:
+
+```bash
+chmod +x deploy.vps
+./deploy.vps
+```
+
+This script automatically installs all required system dependencies (`python3`, `python3-venv`, `ffmpeg`, `aria2`, `qbittorrent-nox`, `7zip`, `rclone`, `git`), sets up the Python virtual environment (`mltbenv`), installs requirements, and launches the application via `start.sh`.
+
+---
+
 Make sure you still mount the repo folder and installed the docker from official documentation.
 
 - There are two methods to build and run the docker:

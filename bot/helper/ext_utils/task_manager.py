@@ -21,7 +21,7 @@ async def user_has_active_task(user_id, current_mid):
     async with task_dict_lock:
         for mid, task in task_dict.items():
             if mid != current_mid and hasattr(task, "listener") and task.listener.user_id == user_id:
-                if task.status() not in ["Queued in download queue", "Queued in upload queue"]:
+                if task.status() not in ["Queued in download queue", "Queued in upload queue", "QueueDl", "QueueUp"]:
                     return True
     return False
 
@@ -33,7 +33,7 @@ async def can_start_queued_task(mid):
             user_id = task.listener.user_id
             for active_mid, active_task in task_dict.items():
                 if active_mid != mid and hasattr(active_task, "listener") and active_task.listener.user_id == user_id:
-                    if active_task.status() not in ["Queued in download queue", "Queued in upload queue"]:
+                    if active_task.status() not in ["Queued in download queue", "Queued in upload queue", "QueueDl", "QueueUp"]:
                         return False
     return True
 

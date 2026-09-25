@@ -53,7 +53,7 @@ async def test_sequence_active_task_check():
     task1 = SimpleNamespace(listener=listener1, status=lambda: "Downloading")
 
     listener2 = SimpleNamespace(user_id=user_id, user_dict={"SEQUENCE": True})
-    task2 = SimpleNamespace(listener=listener2, status=lambda: "Queued in download queue")
+    task2 = SimpleNamespace(listener=listener2, status=lambda: "QueueDl")
 
     with patch("bot.helper.ext_utils.task_manager.task_dict", {101: task1, 102: task2}):
         # User has active task1 (Downloading)

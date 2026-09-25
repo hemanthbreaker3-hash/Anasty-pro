@@ -13,19 +13,19 @@ SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"]
 
 
 class MirrorStatus:
-    STATUS_UPLOAD = "Upload"
-    STATUS_DOWNLOAD = "Download"
-    STATUS_CLONE = "Clone"
+    STATUS_UPLOAD = "Uploading"
+    STATUS_DOWNLOAD = "Downloading"
+    STATUS_CLONE = "Cloning"
     STATUS_QUEUEDL = "QueueDl"
     STATUS_QUEUEUP = "QueueUp"
     STATUS_PAUSED = "Pause"
-    STATUS_ARCHIVE = "Archive"
-    STATUS_EXTRACT = "Extract"
-    STATUS_SPLIT = "Split"
+    STATUS_ARCHIVE = "Archiving"
+    STATUS_EXTRACT = "Extracting"
+    STATUS_SPLIT = "Splitting"
     STATUS_CHECK = "CheckUp"
-    STATUS_SEED = "Seed"
+    STATUS_SEED = "Seeding"
     STATUS_SAMVID = "SamVid"
-    STATUS_CONVERT = "Convert"
+    STATUS_CONVERT = "Converting"
     STATUS_MERGE = "Merging"
     STATUS_FFMPEG = "FFmpeg"
 
