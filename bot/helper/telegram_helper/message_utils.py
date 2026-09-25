@@ -31,8 +31,14 @@ async def send_message(message, text, buttons=None, block=True):
 
 async def send_rich_message(message, rich_input, buttons=None, block=True):
     try:
-        return await message.reply_rich(
-            rich_message=rich_input,
+        if hasattr(rich_input, "html"):
+            text_str = rich_input.html
+        elif hasattr(rich_input, "text"):
+            text_str = rich_input.text
+        else:
+            text_str = str(rich_input)
+        return await message.reply(
+            text=text_str,
             disable_notification=True,
             reply_markup=buttons,
         )
@@ -49,10 +55,16 @@ async def send_rich_message(message, rich_input, buttons=None, block=True):
 
 async def edit_message(message, text=None, buttons=None, block=True, rich_message=None):
     try:
-        return await message.edit(
+        if rich_message is not None:
+            if hasattr(rich_message, "html"):
+                text = rich_message.html
+            elif hasattr(rich_message, "text"):
+                text = rich_message.text
+            else:
+                text = str(rich_message)
+        return await message.edit_text(
             text=text,
             reply_markup=buttons,
-            rich_message=rich_message,
         )
     except FloodWait as f:
         LOGGER.warning(str(f))
