@@ -14,7 +14,7 @@ from logging import (
 )
 from sabnzbdapi import SabnzbdClient
 from time import time
-from os import cpu_count
+from os import cpu_count, getcwd, path
 
 getLogger("requests").setLevel(WARNING)
 getLogger("urllib3").setLevel(WARNING)
@@ -39,7 +39,7 @@ cpu_no = cpu_count()
 threads = max(1, cpu_no // 2)
 cores = ",".join(str(i) for i in reversed(range(threads)))
 
-DOWNLOAD_DIR = "/app/downloads/"
+DOWNLOAD_DIR = path.join(getcwd(), "downloads", "")
 intervals = {"status": {}, "qb": "", "jd": "", "nzb": "", "stopAll": False}
 qb_torrents = {}
 jd_downloads = {}
