@@ -25,6 +25,7 @@ from .. import (
     intervals,
     DOWNLOAD_DIR,
     cores,
+    threads,
 )
 from ..core.config_manager import Config
 from ..core.telegram_manager import TgClient

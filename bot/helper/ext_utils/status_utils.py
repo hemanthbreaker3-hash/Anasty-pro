@@ -28,6 +28,7 @@ class MirrorStatus:
     STATUS_CONVERT = "Converting"
     STATUS_MERGE = "Merging"
     STATUS_FFMPEG = "FFmpeg"
+    STATUS_METADATA = "Applying Metadata"
 
 
 STATUSES = {
@@ -44,6 +45,7 @@ STATUSES = {
     "SP": MirrorStatus.STATUS_SPLIT,
     "SV": MirrorStatus.STATUS_SAMVID,
     "FF": MirrorStatus.STATUS_FFMPEG,
+    "MD": MirrorStatus.STATUS_METADATA,
     "PA": MirrorStatus.STATUS_PAUSED,
     "CK": MirrorStatus.STATUS_CHECK,
 }

@@ -46,7 +46,7 @@ leech_options = [
     "THUMBNAIL_LAYOUT",
     "CLONE_DUMP_CHATS",
 ]
-video_tools_options = ["AUTO_MERGE", "KEEP_ORIGINAL"]
+video_tools_options = ["AUTO_MERGE", "KEEP_ORIGINAL", "METADATA_TEXT"]
 rclone_options = ["RCLONE_CONFIG", "RCLONE_PATH", "RCLONE_FLAGS"]
 gdrive_options = ["TOKEN_PICKLE", "GDRIVE_ID", "INDEX_URL"]
 uploaders_options = ["BUZZHEAVIER_ACCOUNT_ID", "BUZZHEAVIER_FOLDER_ID"]
@@ -303,9 +303,13 @@ Stop Duplicate is <b>{sd_msg}</b>"""
         buttons.data_button("Back", f"userset {user_id} back")
         buttons.data_button("Close", f"userset {user_id} close")
 
+        metadata_text = user_dict.get("METADATA_TEXT", "") or Config.METADATA_TEXT or "None"
+        buttons.data_button("Metadata Text/Link", f"userset {user_id} menu METADATA_TEXT")
+
         text = f"""<u>Video Tools Settings for {name}</u>
 Auto Merge is <b>{am_msg}</b>
-Keep Original Files is <b>{ko_msg}</b>"""
+Keep Original Files is <b>{ko_msg}</b>
+Metadata Text/Link is <code>{metadata_text}</code>"""
     elif stype == "uploaders":
         buttons.data_button(
             "Buzzheavier Account ID", f"userset {user_id} menu BUZZHEAVIER_ACCOUNT_ID"

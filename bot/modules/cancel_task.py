@@ -78,9 +78,13 @@ async def cancel_updates(_, query):
                 msg = "Stopped!"
         else:
             msg = "Already Stopped/Finished!"
-    else:
+    elif len(data) > 2:
         gid = data[2]
         task = await get_task_by_gid(gid)
+    else:
+        msg = "Invalid cancellation query!"
+        await query.answer(msg, show_alert=True)
+        return
         if task is None:
             msg = "Task already cancelled or finished!"
         elif user_id != task.listener.user_id and not await CustomFilters.sudo(
