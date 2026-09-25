@@ -61,6 +61,8 @@ async def edit_message(message, text=None, buttons=None, block=True, rich_messag
         await sleep(f.value * 1.2)
         return await edit_message(message, text, buttons, block, rich_message)
     except Exception as e:
+        if "MESSAGE_NOT_MODIFIED" in str(e):
+            return message
         LOGGER.error(str(e))
         return str(e)
 

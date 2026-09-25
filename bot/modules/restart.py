@@ -76,6 +76,23 @@ async def restart_notification():
         except:
             pass
         await remove(".restartmsg")
+    else:
+        recipients = set()
+        if Config.OWNER_ID:
+            recipients.add(Config.OWNER_ID)
+        if Config.SUDO_USERS:
+            for sudo in str(Config.SUDO_USERS).split():
+                if sudo.isdigit():
+                    recipients.add(int(sudo))
+        for user_id in recipients:
+            try:
+                await TgClient.bot.send_message(
+                    chat_id=user_id,
+                    text="Bot Started Successfully!",
+                    disable_notification=True,
+                )
+            except Exception as e:
+                LOGGER.error(f"Failed to send Bot Started message to {user_id}: {e}")
 
 
 @new_task

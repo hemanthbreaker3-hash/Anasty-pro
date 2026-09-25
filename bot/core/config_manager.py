@@ -39,6 +39,7 @@ class Config:
     LEECH_FILENAME_PREFIX = ""
     LEECH_SPLIT_SIZE = 2097152000
     MEDIA_GROUP = False
+    METADATA_TEXT = ""
     HYBRID_LEECH = False
     HYDRA_IP = ""
     HYDRA_API_KEY = ""
