@@ -45,6 +45,7 @@ leech_options = [
     "LEECH_FILENAME_PREFIX",
     "THUMBNAIL_LAYOUT",
     "CLONE_DUMP_CHATS",
+    "CAPTION_FONT",
 ]
 video_tools_options = ["AUTO_MERGE", "KEEP_ORIGINAL", "METADATA_TEXT"]
 rclone_options = ["RCLONE_CONFIG", "RCLONE_PATH", "RCLONE_FLAGS"]
@@ -207,6 +208,9 @@ async def get_user_settings(from_user, stype="main"):
             seq_status = "Disabled"
             buttons.data_button("Enable Sequence", f"userset {user_id} tog SEQUENCE t")
 
+        cap_font = user_dict.get("CAPTION_FONT", "Monospace") or "Monospace"
+        buttons.data_button("Caption Font", f"userset {user_id} menu CAPTION_FONT")
+
         buttons.data_button("Back", f"userset {user_id} back")
         buttons.data_button("Close", f"userset {user_id} close")
 
@@ -225,6 +229,7 @@ Thumbnail Layout is <b>{thumb_layout}</b>
 Files Links is <b>{fl}</b>
 Split Mode is <b>{split_mode.title()}</b>
 Sequence is <b>{seq_status}</b>
+Caption Font is <b>{cap_font.title()}</b>
 """
     elif stype == "rclone":
         buttons.data_button("Rclone Config", f"userset {user_id} menu RCLONE_CONFIG")
@@ -564,6 +569,26 @@ async def get_menu(option, message, user_id):
     handler_dict[user_id] = False
     user_dict = user_data.get(user_id, {})
     buttons = ButtonMaker()
+    if option == "CAPTION_FONT":
+        font_options = [
+            ("Bold", "bold"),
+            ("Italic", "italic"),
+            ("Bold Italic", "bold_italic"),
+            ("Sans", "sans"),
+            ("Serif", "serif"),
+            ("Monospace", "monospace"),
+            ("Underline", "underline"),
+            ("Strike", "strike"),
+            ("Spoiler", "spoiler"),
+            ("Normal", "normal"),
+        ]
+        for font_name, font_key in font_options:
+            buttons.data_button(font_name, f"userset {user_id} setcapfont {font_key}")
+        buttons.data_button("Back", f"userset {user_id} leech")
+        buttons.data_button("Close", f"userset {user_id} close")
+        text = "Select Caption Font/Style for Telegram uploads:"
+        await edit_message(message, text, buttons.build_menu(2))
+        return
     if option in ["THUMBNAIL", "RCLONE_CONFIG", "TOKEN_PICKLE"]:
         key = "file"
     else:
@@ -725,6 +750,11 @@ async def edit_user_settings(client, query):
     elif data[2] in ["leech", "vtools", "gdrive", "rclone", "uploaders"]:
         await query.answer()
         await update_user_settings(query, data[2])
+    elif data[2] == "setcapfont":
+        await query.answer("Saved!", show_alert=True)
+        update_user_ldata(user_id, "CAPTION_FONT", data[3])
+        await database.update_user_data(user_id)
+        await update_user_settings(query, stype="leech")
     elif data[2] == "splitmode":
         await query.answer()
         update_user_ldata(user_id, "LEECH_SPLIT_MODE", data[3])

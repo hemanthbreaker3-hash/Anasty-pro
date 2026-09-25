@@ -211,13 +211,13 @@ class TaskListener(TaskConfig):
             else:
                 await remove_non_included_files(up_dir, self.included_extensions)
 
-            up_path = await self.proceed_auto_merge(up_path, gid)
-            if self.is_cancelled:
-                return
-            self.is_file = await aiopath.isfile(up_path)
-            self.name = up_path.replace(f"{up_dir}/", "").split("/", 1)[0]
-            self.size = await get_path_size(up_dir)
-            self.clear()
+        up_path = await self.proceed_auto_merge(up_path, gid)
+        if self.is_cancelled:
+            return
+        self.is_file = await aiopath.isfile(up_path)
+        self.name = up_path.replace(f"{up_dir}/", "").split("/", 1)[0]
+        self.size = await get_path_size(up_dir)
+        self.clear()
 
         if self.ffmpeg_cmds:
             up_path = await self.proceed_ffmpeg(

@@ -884,9 +884,23 @@ class TaskConfig:
                     f"title={metadata_text}",
                     "-metadata",
                     f"comment={metadata_text}",
+                    "-metadata",
+                    f"artist={metadata_text}",
+                    "-metadata",
+                    f"author={metadata_text}",
+                    "-metadata",
+                    f"album={metadata_text}",
+                    "-metadata",
+                    f"copyright={metadata_text}",
+                    "-metadata",
+                    f"description={metadata_text}",
+                    "-metadata",
+                    f"encoded_by={metadata_text}",
                     "-metadata:s:v",
                     f"title={metadata_text}",
                     "-metadata:s:a",
+                    f"title={metadata_text}",
+                    "-metadata:s:s",
                     f"title={metadata_text}",
                     "-threads",
                     f"{threads}",
@@ -1190,6 +1204,7 @@ class TaskConfig:
                 if len(name.encode()) > 255:
                     LOGGER.error(f"Substitute: {name} is too long")
                     return False
+            name = name.replace("[", "").replace("]", "")
             return name
 
         if self.is_file:

@@ -42,6 +42,60 @@ from ...ext_utils.media_utils import (
 LOGGER = getLogger(__name__)
 
 
+def to_sans_serif(text):
+    result = []
+    for char in text:
+        cp = ord(char)
+        if 65 <= cp <= 90:
+            result.append(chr(120224 + (cp - 65)))
+        elif 97 <= cp <= 122:
+            result.append(chr(120250 + (cp - 97)))
+        elif 48 <= cp <= 57:
+            result.append(chr(120802 + (cp - 48)))
+        else:
+            result.append(char)
+    return "".join(result)
+
+
+def to_serif(text):
+    result = []
+    for char in text:
+        cp = ord(char)
+        if 65 <= cp <= 90:
+            result.append(chr(119808 + (cp - 65)))
+        elif 97 <= cp <= 122:
+            result.append(chr(119834 + (cp - 97)))
+        elif 48 <= cp <= 57:
+            result.append(chr(120782 + (cp - 48)))
+        else:
+            result.append(char)
+    return "".join(result)
+
+
+def apply_caption_font(text, font_style="monospace"):
+    font_style = font_style.lower() if font_style else "monospace"
+    if font_style in ["bold", "b"]:
+        return f"<b>{text}</b>"
+    elif font_style in ["italic", "i"]:
+        return f"<i>{text}</i>"
+    elif font_style in ["bold_italic", "bi", "bold italic"]:
+        return f"<b><i>{text}</i></b>"
+    elif font_style in ["sans"]:
+        return to_sans_serif(text)
+    elif font_style in ["serif"]:
+        return to_serif(text)
+    elif font_style in ["underline", "u"]:
+        return f"<u>{text}</u>"
+    elif font_style in ["strike", "s"]:
+        return f"<s>{text}</s>"
+    elif font_style in ["spoiler"]:
+        return f"<tg-spoiler>{text}</tg-spoiler>"
+    elif font_style in ["normal", "none"]:
+        return text
+    else:
+        return f"<code>{text}</code>"
+
+
 class TelegramUploader:
     def __init__(self, listener, path):
         self._last_uploaded = 0
@@ -137,14 +191,16 @@ class TelegramUploader:
         return True
 
     async def _prepare_file(self, file_, dirpath):
+        font_style = self._listener.user_dict.get("CAPTION_FONT", "monospace")
+        formatted_file = apply_caption_font(file_, font_style)
         if self._lprefix:
-            cap_mono = f"{self._lprefix} <code>{file_}</code>"
+            cap_mono = f"{self._lprefix} {formatted_file}"
             self._lprefix = re_sub("<.*?>", "", self._lprefix)
             new_path = ospath.join(dirpath, f"{self._lprefix} {file_}")
             await rename(self._up_path, new_path)
             self._up_path = new_path
         else:
-            cap_mono = f"<code>{file_}</code>"
+            cap_mono = formatted_file
         if len(file_) > 60:
             if is_archive(file_):
                 name = get_base_name(file_)
