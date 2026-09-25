@@ -287,16 +287,13 @@ class TaskListener(TaskConfig):
                 return
             self.clear()
 
-        metadata_text = self.user_dict.get("METADATA_TEXT", "") or Config.METADATA_TEXT
-        if metadata_text:
-            LOGGER.info(f"Applying metadata to {up_path}")
-            async with task_dict_lock:
-                from ..mirror_leech_utils.status_utils.queue_status import QueueStatus
-                from ..ext_utils.status_utils import MirrorStatus
-                # Update status temporarily to Applying Metadata
-                if self.mid in task_dict:
-                    task_dict[self.mid]._status = MirrorStatus.STATUS_METADATA
-            await sleep(1)
+        up_path = await self.proceed_metadata(up_path, gid)
+        if self.is_cancelled:
+            return
+        self.is_file = await aiopath.isfile(up_path)
+        self.name = up_path.replace(f"{up_dir}/", "").split("/", 1)[0]
+        self.size = await get_path_size(up_dir)
+        self.clear()
 
         self.subproc = None
 

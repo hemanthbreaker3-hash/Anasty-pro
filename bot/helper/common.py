@@ -50,6 +50,7 @@ from .ext_utils.links_utils import (
     is_rclone_path,
     is_gdrive_link,
     is_telegram_link,
+    is_url,
 )
 from .ext_utils.media_utils import (
     create_thumb,
@@ -720,8 +721,6 @@ class TaskConfig:
         base_folder = dl_path if not self.is_file else ospath.dirname(dl_path)
         source_name = ospath.basename(dl_path)
         base_name, _ = ospath.splitext(source_name)
-        out_filename = f"{base_name}.mkv"
-        out_path = ospath.join(base_folder, out_filename)
 
         concat_txt_path = ospath.join(base_folder, "merge_list.txt")
         txt_content = ""
@@ -734,6 +733,8 @@ class TaskConfig:
         ffmpeg = FFMpeg(self)
         async with task_dict_lock:
             task_dict[self.mid] = FFmpegStatus(self, ffmpeg, gid, "Merge")
+
+        temp_out = ospath.join(base_folder, "mltb.mkv")
 
         cmd = [
             "taskset",
@@ -755,7 +756,7 @@ class TaskConfig:
             "copy",
             "-threads",
             f"{threads}",
-            out_path,
+            temp_out,
         ]
 
         self.progress = False
@@ -768,26 +769,138 @@ class TaskConfig:
         if await aiopath.exists(concat_txt_path):
             await remove(concat_txt_path)
 
-        if res and await aiopath.exists(out_path):
+        if res and await aiopath.exists(res[0]):
+            merged_temp_path = res[0]
+            final_out_path = ospath.join(base_folder, f"{base_name}.mkv")
+            if final_out_path in video_files:
+                final_out_path = ospath.join(base_folder, f"{base_name}_merged.mkv")
+
             keep_original = self.user_dict.get("KEEP_ORIGINAL", False)
             if not keep_original:
                 for vf in video_files:
-                    if vf != out_path and await aiopath.exists(vf):
+                    if vf != merged_temp_path and await aiopath.exists(vf):
                         try:
                             await remove(vf)
                         except Exception as e:
                             LOGGER.error(f"Failed to remove original file {vf}: {e}")
+
+            await move(merged_temp_path, final_out_path)
+
             if not keep_original and not self.is_file:
                 try:
                     remaining = await listdir(base_folder)
-                    if len(remaining) == 1 and remaining[0] == out_filename:
+                    if len(remaining) == 1 and remaining[0] == ospath.basename(final_out_path):
                         self.is_file = True
-                        return out_path
+                        return final_out_path
                 except Exception:
                     pass
             if self.is_file:
-                return out_path
+                return final_out_path
             return dl_path
+        return dl_path
+
+    async def proceed_metadata(self, dl_path, gid):
+        metadata_text = self.user_dict.get("METADATA_TEXT", "") or Config.METADATA_TEXT
+        if not metadata_text:
+            return dl_path
+
+        if is_telegram_link(metadata_text):
+            try:
+                msg = (await get_tg_link_message(metadata_text))[0]
+                if msg and msg.text:
+                    metadata_text = msg.text
+                elif msg and (msg.document or msg.photo):
+                    file_dir = await temp_download(msg)
+                    async with aiopen(file_dir, "r", encoding="utf-8", errors="ignore") as f:
+                        metadata_text = await f.read()
+                    if await aiopath.exists(file_dir):
+                        await remove(file_dir)
+            except Exception as e:
+                LOGGER.error(f"Failed to fetch metadata from Telegram link: {e}")
+        elif is_url(metadata_text):
+            try:
+                from aiohttp import ClientSession
+                async with ClientSession() as session:
+                    async with session.get(metadata_text) as resp:
+                        if resp.status == 200:
+                            metadata_text = await resp.text()
+            except Exception as e:
+                LOGGER.error(f"Failed to fetch metadata from URL: {e}")
+
+        metadata_text = metadata_text.strip()
+        if not metadata_text:
+            return dl_path
+
+        media_files = []
+        if self.is_file:
+            is_video, is_audio, _ = await get_document_type(dl_path)
+            if is_video or is_audio:
+                media_files.append(dl_path)
+        else:
+            walk_data = await sync_to_async(lambda: list(walk(dl_path, topdown=False)))
+            for dirpath, _, files in natsorted(walk_data):
+                for file_ in natsorted(files):
+                    f_path = ospath.join(dirpath, file_)
+                    is_video, is_audio, _ = await get_document_type(f_path)
+                    if is_video or is_audio:
+                        media_files.append(f_path)
+
+        if not media_files:
+            return dl_path
+
+        ffmpeg = FFMpeg(self)
+        async with task_dict_lock:
+            task_dict[self.mid] = FFmpegStatus(self, ffmpeg, gid, "Metadata")
+
+        self.progress = False
+        async with cpu_eater_lock:
+            self.progress = True
+            for f_path in media_files:
+                if self.is_cancelled:
+                    return dl_path
+                self.subsize = await get_path_size(f_path)
+                self.subname = ospath.basename(f_path)
+
+                dir_name, file_name = ospath.split(f_path)
+                temp_file = ospath.join(dir_name, f"mltb_meta_{file_name}")
+
+                cmd = [
+                    "taskset",
+                    "-c",
+                    f"{cores}",
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-progress",
+                    "pipe:1",
+                    "-i",
+                    f_path,
+                    "-map",
+                    "0",
+                    "-c",
+                    "copy",
+                    "-metadata",
+                    f"title={metadata_text}",
+                    "-metadata",
+                    f"comment={metadata_text}",
+                    "-metadata:s:v",
+                    f"title={metadata_text}",
+                    "-metadata:s:a",
+                    f"title={metadata_text}",
+                    "-threads",
+                    f"{threads}",
+                    temp_file,
+                ]
+
+                res = await ffmpeg.ffmpeg_cmds(cmd, f_path)
+                if res and await aiopath.exists(temp_file):
+                    await remove(f_path)
+                    await move(temp_file, f_path)
+                else:
+                    if await aiopath.exists(temp_file):
+                        await remove(temp_file)
+
         return dl_path
 
     async def proceed_extract(self, dl_path, gid):

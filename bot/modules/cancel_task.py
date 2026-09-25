@@ -88,23 +88,9 @@ async def cancel_updates(_, query):
         ):
             await query.answer("Not Yours!", show_alert=True)
             return
-        elif data[1] == "canconf":
+        elif data[1] == "close":
+            await delete_message(query.message)
             await query.answer()
-            button = ButtonMaker()
-            button.data_button("Yes", f"cancel conf {data[2]}", style="green")
-            button.data_button("No", "cancel close", style="red")
-            cmd_msg = (
-                await TgClient.bot.get_messages(
-                    query.message.chat.id, task.listener.mid
-                )
-                or query.message
-            )
-            res = await send_message(
-                cmd_msg,
-                "Are you sure you want to cancel this task?",
-                buttons=button.build_menu(2),
-            )
-            await auto_delete_message(res)
             return
     else:
         msg = "Invalid cancellation query!"
@@ -113,8 +99,9 @@ async def cancel_updates(_, query):
     if msg:
         await query.answer(msg, show_alert=True)
         return
-    await delete_message(query.message)
-    await query.answer()
+    if data[1] == "conf":
+        await delete_message(query.message)
+    await query.answer("Cancelling task...")
     obj = task.task()
     await obj.cancel_task()
 

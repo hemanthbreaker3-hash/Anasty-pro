@@ -304,12 +304,12 @@ Stop Duplicate is <b>{sd_msg}</b>"""
         buttons.data_button("Close", f"userset {user_id} close")
 
         metadata_text = user_dict.get("METADATA_TEXT", "") or Config.METADATA_TEXT or "None"
-        buttons.data_button("Metadata Text/Link", f"userset {user_id} menu METADATA_TEXT")
+        buttons.data_button("Metadata", f"userset {user_id} menu METADATA_TEXT")
 
-        text = f"""<u>Video Tools Settings for {name}</u>
+        text = f"""<u>FFmpeg Tools Settings for {name}</u>
 Auto Merge is <b>{am_msg}</b>
 Keep Original Files is <b>{ko_msg}</b>
-Metadata Text/Link is <code>{metadata_text}</code>"""
+Metadata is <code>{metadata_text}</code>"""
     elif stype == "uploaders":
         buttons.data_button(
             "Buzzheavier Account ID", f"userset {user_id} menu BUZZHEAVIER_ACCOUNT_ID"
@@ -332,7 +332,7 @@ Buzzheavier Account ID: {bh_acc}
 Buzzheavier Folder ID: {bh_fol}"""
     else:
         buttons.data_button("Leech", f"userset {user_id} leech")
-        buttons.data_button("Video Tools", f"userset {user_id} vtools")
+        buttons.data_button("FFmpeg Tools", f"userset {user_id} vtools")
         buttons.data_button("Rclone", f"userset {user_id} rclone")
         buttons.data_button("Gdrive API", f"userset {user_id} gdrive")
         buttons.data_button("Uploaders", f"userset {user_id} uploaders")
