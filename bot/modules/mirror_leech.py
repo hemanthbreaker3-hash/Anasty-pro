@@ -10,7 +10,9 @@ from ..helper.ext_utils.bot_utils import (
     sync_to_async,
     arg_parser,
     COMMAND_USAGE,
+    clean_caption_name,
 )
+from ..core.config_manager import Config
 from ..helper.ext_utils.exceptions import DirectDownloadLinkException
 from ..helper.ext_utils.links_utils import (
     is_url,
@@ -301,6 +303,13 @@ class Mirror(TaskListener):
             ):
                 self.link = await reply_to.download()
                 file_ = None
+
+            name_source = self.user_dict.get("NAME_SOURCE", "") or getattr(Config, "NAME_SOURCE", "title")
+            if name_source == "filecaption" and reply_to.caption and not self.name:
+                orig_fname = file_.file_name if file_ and hasattr(file_, "file_name") and file_.file_name else ""
+                cap_name = clean_caption_name(reply_to.caption, orig_fname)
+                if cap_name:
+                    self.name = cap_name
 
         if (
             not self.link

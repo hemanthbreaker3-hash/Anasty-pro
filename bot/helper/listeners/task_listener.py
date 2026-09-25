@@ -268,6 +268,14 @@ class TaskListener(TaskConfig):
             self.size = await get_path_size(up_dir)
             self.clear()
 
+        up_path = await self.proceed_metadata(up_path, gid)
+        if self.is_cancelled:
+            return
+        self.is_file = await aiopath.isfile(up_path)
+        self.name = up_path.replace(f"{up_dir}/", "").split("/", 1)[0]
+        self.size = await get_path_size(up_dir)
+        self.clear()
+
         if self.compress:
             up_path = await self.proceed_compress(
                 up_path,
@@ -286,14 +294,6 @@ class TaskListener(TaskConfig):
             if self.is_cancelled:
                 return
             self.clear()
-
-        up_path = await self.proceed_metadata(up_path, gid)
-        if self.is_cancelled:
-            return
-        self.is_file = await aiopath.isfile(up_path)
-        self.name = up_path.replace(f"{up_dir}/", "").split("/", 1)[0]
-        self.size = await get_path_size(up_dir)
-        self.clear()
 
         self.subproc = None
 

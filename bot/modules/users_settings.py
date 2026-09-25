@@ -28,6 +28,7 @@ from ..helper.ext_utils.bot_utils import (
     update_user_ldata,
     new_task,
     get_size_bytes,
+    clean_caption_name,
 )
 from ..helper.telegram_helper.message_utils import (
     send_message,
@@ -396,6 +397,7 @@ Buzzheavier Folder ID: {bh_fol}"""
             ns_msg = "Added"
         else:
             ns_msg = "None"
+        ns_src = user_dict.get("NAME_SOURCE", "title")
         buttons.data_button(
             "Name Substitute", f"userset {user_id} menu NAME_SUBSTITUTE"
         )
@@ -436,7 +438,7 @@ Default Package is <b>{du}</b>
 Use <b>{tr}</b> token/config
 Upload Paths is <code>{upload_paths}</code>
 
-Name substitution is <code>{ns_msg}</code>
+Name substitution is <code>{ns_msg}</code> (Source: <code>{ns_src.title()}</code>)
 
 Excluded Extensions is <code>{ex_ex}</code>
 
@@ -598,6 +600,10 @@ async def get_menu(option, message, user_id):
         split_mode = user_dict.get("LEECH_SPLIT_MODE", "part")
         new_mode = "number" if split_mode == "part" else "part"
         buttons.data_button(f"Switch Mode to {new_mode.title()}", f"userset {user_id} splitmode {new_mode}")
+    if option == "NAME_SUBSTITUTE":
+        ns_src = user_dict.get("NAME_SOURCE", "title")
+        next_src = "filecaption" if ns_src == "title" else "title"
+        buttons.data_button(f"Name Source ({ns_src.title()})", f"userset {user_id} namesource {next_src}")
     if option in user_dict and key != "file":
         buttons.data_button("Reset", f"userset {user_id} reset {option}")
     buttons.data_button("Remove", f"userset {user_id} remove {option}")
@@ -760,6 +766,11 @@ async def edit_user_settings(client, query):
         update_user_ldata(user_id, "LEECH_SPLIT_MODE", data[3])
         await database.update_user_data(user_id)
         await get_menu("LEECH_SPLIT_SIZE", message, user_id)
+    elif data[2] == "namesource":
+        await query.answer()
+        update_user_ldata(user_id, "NAME_SOURCE", data[3])
+        await database.update_user_data(user_id)
+        await get_menu("NAME_SUBSTITUTE", message, user_id)
     elif data[2] == "export":
         await query.answer()
         await export_user_settings(client, query)

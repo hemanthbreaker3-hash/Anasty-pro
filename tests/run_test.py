@@ -21,6 +21,8 @@ sys.modules["httpx"] = httpx_mod
 
 # 2. Setup paths
 project_root = os.getcwd()
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # 3. Stub the dependencies
 bot_pkg = ModuleType("bot")
@@ -61,6 +63,46 @@ ext_utils_pkg.__path__ = []
 
 bot_utils_mod = ModuleType("bot.helper.ext_utils.bot_utils")
 bot_utils_mod.cmd_exec = lambda *args, **kwargs: (b"", b"", 0)
+
+import re
+
+def _clean_caption_name(caption, original_filename=""):
+    if not caption:
+        return ""
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"
+        "\U0001F300-\U0001F5FF"
+        "\U0001F680-\U0001F6FF"
+        "\U0001F1E0-\U0001F1FF"
+        "\U0001F900-\U0001F9FF"
+        "\U0001FA70-\U0001FAFF"
+        "\u2702-\u27B0"
+        "\u24C2-\u25B6"
+        "\u2600-\u27EF"
+        "\u2300-\u23FF"
+        "\u2B00-\u2BFF"
+        "\u200D"
+        "\uFE0F"
+        "]+",
+        flags=re.UNICODE,
+    )
+    cleaned = emoji_pattern.sub("", caption)
+    cleaned = " ".join(cleaned.split()).strip()
+
+    ext_match = re.search(
+        r"^(.*?\.[a-zA-Z0-9]{2,4})\b", cleaned, re.IGNORECASE | re.DOTALL
+    )
+    if ext_match:
+        name = ext_match.group(1).strip()
+    else:
+        ext = ""
+        if original_filename and "." in original_filename:
+            ext = "." + original_filename.rsplit(".", 1)[-1]
+        name = cleaned + ext if ext else cleaned
+    return name
+
+bot_utils_mod.clean_caption_name = _clean_caption_name
 
 task_manager_mod = ModuleType("bot.helper.ext_utils.task_manager")
 task_manager_mod.check_running_tasks = lambda *args, **kwargs: (False, None)
@@ -147,6 +189,7 @@ from bot.helper.mirror_leech_utils.download_utils.tldv_downloader import (
     parse_tldv_conf,
     get_tldv_token,
 )
+from tests.test_caption_and_merge import TestCaptionAndMerge
 
 
 class TestTldv(unittest.TestCase):

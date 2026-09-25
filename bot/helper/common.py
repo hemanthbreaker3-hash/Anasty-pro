@@ -703,7 +703,8 @@ class TaskConfig:
         if not auto_merge:
             return dl_path
         video_files = []
-        if self.is_file:
+        is_file = await aiopath.isfile(dl_path)
+        if is_file:
             is_video, _, _ = await get_document_type(dl_path)
             if is_video:
                 video_files.append(dl_path)
@@ -718,7 +719,7 @@ class TaskConfig:
         if len(video_files) <= 1:
             return dl_path
 
-        base_folder = dl_path if not self.is_file else ospath.dirname(dl_path)
+        base_folder = dl_path if not is_file else ospath.dirname(dl_path)
         source_name = ospath.basename(dl_path)
         base_name, _ = ospath.splitext(source_name)
 
@@ -784,9 +785,19 @@ class TaskConfig:
                         except Exception as e:
                             LOGGER.error(f"Failed to remove original file {vf}: {e}")
 
+                walk_data = await sync_to_async(lambda: list(walk(base_folder, topdown=False)))
+                for root, dirs, _ in walk_data:
+                    for d in dirs:
+                        dir_to_check = ospath.join(root, d)
+                        try:
+                            if not (await listdir(dir_to_check)):
+                                await rmtree(dir_to_check)
+                        except Exception:
+                            pass
+
             await move(merged_temp_path, final_out_path)
 
-            if not keep_original and not self.is_file:
+            if not keep_original:
                 try:
                     remaining = await listdir(base_folder)
                     if len(remaining) == 1 and remaining[0] == ospath.basename(final_out_path):
@@ -794,7 +805,8 @@ class TaskConfig:
                         return final_out_path
                 except Exception:
                     pass
-            if self.is_file:
+            if is_file:
+                self.is_file = True
                 return final_out_path
             return dl_path
         return dl_path
@@ -832,7 +844,8 @@ class TaskConfig:
             return dl_path
 
         media_files = []
-        if self.is_file:
+        is_file = await aiopath.isfile(dl_path)
+        if is_file:
             is_video, is_audio, _ = await get_document_type(dl_path)
             if is_video or is_audio:
                 media_files.append(dl_path)

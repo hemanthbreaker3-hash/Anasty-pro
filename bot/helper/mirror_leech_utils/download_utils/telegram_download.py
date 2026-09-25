@@ -9,6 +9,8 @@ from .... import (
 )
 from ....core.telegram_manager import TgClient
 from ...ext_utils.task_manager import check_running_tasks, stop_duplicate_check
+from ...ext_utils.bot_utils import clean_caption_name
+from ....core.config_manager import Config
 from ...mirror_leech_utils.status_utils.queue_status import QueueStatus
 from ...mirror_leech_utils.status_utils.telegram_status import TelegramStatus
 from ...telegram_helper.message_utils import send_status_message
@@ -117,6 +119,14 @@ class TelegramDownloadHelper:
                 download = media.file_unique_id not in GLOBAL_GID
 
             if download:
+                name_source = self._listener.user_dict.get("NAME_SOURCE", "") or getattr(Config, "NAME_SOURCE", "title")
+                caption_text = message.caption or (message.reply_to_message.caption if getattr(message, "reply_to_message", None) and message.reply_to_message.caption else "")
+                if name_source == "filecaption" and caption_text and not self._listener.name:
+                    orig_fname = media.file_name if hasattr(media, "file_name") and media.file_name else ""
+                    cap_name = clean_caption_name(caption_text, orig_fname)
+                    if cap_name:
+                        self._listener.name = cap_name
+
                 if not self._listener.name:
                     if hasattr(media, "file_name") and media.file_name:
                         if "/" in media.file_name:
