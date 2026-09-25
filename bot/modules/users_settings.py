@@ -871,13 +871,13 @@ async def export_user_settings(client, query):
             zf.writestr("user_data.json", json.dumps(user_dict, indent=2))
             thumbpath = f"thumbnails/{user_id}.jpg"
             if await aiopath.exists(thumbpath):
-                zf.write(thumbpath, f"thumbnails/{user_id}.jpg")
+                zf.write(thumbpath, "thumbnail.jpg")
             rclone_conf = f"rclone/{user_id}.conf"
             if await aiopath.exists(rclone_conf):
-                zf.write(rclone_conf, f"rclone/{user_id}.conf")
+                zf.write(rclone_conf, "rclone.conf")
             token_pickle = f"tokens/{user_id}.pickle"
             if await aiopath.exists(token_pickle):
-                zf.write(token_pickle, f"tokens/{user_id}.pickle")
+                zf.write(token_pickle, "token.pickle")
         await send_file(query.message, zip_path, f"Settings for {query.from_user.mention}")
     except Exception as e:
         await send_message(query.message, f"Export failed: {e}")
@@ -911,20 +911,29 @@ async def import_user_settings(client, query):
                 user_data[user_id] = data
                 await database.update_user_data(user_id)
 
-                if f"thumbnails/{user_id}.jpg" in file_list:
+                thumb_member = next((f for f in file_list if f == "thumbnail.jpg" or f.startswith("thumbnails/")), None)
+                if thumb_member:
                     await makedirs("thumbnails", exist_ok=True)
-                    zf.extract(f"thumbnails/{user_id}.jpg", ".")
-                    await database.update_user_doc(user_id, "THUMBNAIL", f"thumbnails/{user_id}.jpg")
+                    dest_thumb = f"thumbnails/{user_id}.jpg"
+                    with open(dest_thumb, "wb") as f_out:
+                        f_out.write(zf.read(thumb_member))
+                    await database.update_user_doc(user_id, "THUMBNAIL", dest_thumb)
 
-                if f"rclone/{user_id}.conf" in file_list:
+                rclone_member = next((f for f in file_list if f == "rclone.conf" or f.startswith("rclone/")), None)
+                if rclone_member:
                     await makedirs("rclone", exist_ok=True)
-                    zf.extract(f"rclone/{user_id}.conf", ".")
-                    await database.update_user_doc(user_id, "RCLONE_CONFIG", f"rclone/{user_id}.conf")
+                    dest_rclone = f"rclone/{user_id}.conf"
+                    with open(dest_rclone, "wb") as f_out:
+                        f_out.write(zf.read(rclone_member))
+                    await database.update_user_doc(user_id, "RCLONE_CONFIG", dest_rclone)
 
-                if f"tokens/{user_id}.pickle" in file_list:
+                token_member = next((f for f in file_list if f == "token.pickle" or f.startswith("tokens/")), None)
+                if token_member:
                     await makedirs("tokens", exist_ok=True)
-                    zf.extract(f"tokens/{user_id}.pickle", ".")
-                    await database.update_user_doc(user_id, "TOKEN_PICKLE", f"tokens/{user_id}.pickle")
+                    dest_token = f"tokens/{user_id}.pickle"
+                    with open(dest_token, "wb") as f_out:
+                        f_out.write(zf.read(token_member))
+                    await database.update_user_doc(user_id, "TOKEN_PICKLE", dest_token)
 
             await send_message(message, "Settings imported and restored successfully!")
         except Exception as e:

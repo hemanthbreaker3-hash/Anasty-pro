@@ -776,8 +776,15 @@ class TaskConfig:
                             await remove(vf)
                         except Exception as e:
                             LOGGER.error(f"Failed to remove original file {vf}: {e}")
+            if not keep_original and not self.is_file:
+                try:
+                    remaining = await listdir(base_folder)
+                    if len(remaining) == 1 and remaining[0] == out_filename:
+                        self.is_file = True
+                        return out_path
+                except Exception:
+                    pass
             if self.is_file:
-                self.is_file = True
                 return out_path
             return dl_path
         return dl_path
