@@ -22,8 +22,8 @@ from ..core.torrent_manager import TorrentManager
 @new_task
 async def restart_bot(_, message):
     buttons = ButtonMaker()
-    buttons.data_button("Yes!", "botrestart confirm")
-    buttons.data_button("Cancel", "botrestart cancel")
+    buttons.data_button("Yes!", "botrestart confirm", style="danger")
+    buttons.data_button("Cancel", "botrestart cancel", style="primary")
     button = buttons.build_menu(2)
     await send_message(message, "Are you sure you want to restart the bot ?!", button)
 

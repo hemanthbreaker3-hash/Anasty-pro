@@ -44,8 +44,8 @@ class SetInterval:
 def _build_command_usage(help_dict, command_key):
     buttons = ButtonMaker()
     for name in list(help_dict.keys())[1:]:
-        buttons.data_button(name, f"help {command_key} {name}")
-    buttons.data_button("Close", "help close")
+        buttons.data_button(name, f"help {command_key} {name}", style="primary")
+    buttons.data_button("Close", "help close", style="danger")
     COMMAND_USAGE[command_key] = [help_dict["main"], buttons.build_menu(3)]
     buttons.reset()
 
@@ -62,14 +62,14 @@ def bt_selection_buttons(id_):
     pin = "".join([n for n in id_ if n.isdigit()][:4])
     buttons = ButtonMaker()
     if Config.WEB_PINCODE:
-        buttons.url_button("Select Files", f"{Config.BASE_URL}/app/files?gid={id_}")
-        buttons.data_button("Pincode", f"sel pin {gid} {pin}")
+        buttons.url_button("Select Files", f"{Config.BASE_URL}/app/files?gid={id_}", style="primary")
+        buttons.data_button("Pincode", f"sel pin {gid} {pin}", style="primary")
     else:
         buttons.url_button(
-            "Select Files", f"{Config.BASE_URL}/app/files?gid={id_}&pin={pin}"
+            "Select Files", f"{Config.BASE_URL}/app/files?gid={id_}&pin={pin}", style="primary"
         )
-    buttons.data_button("Done Selecting", f"sel done {gid} {id_}")
-    buttons.data_button("Close", "sel close")
+    buttons.data_button("Done Selecting", f"sel done {gid} {id_}", style="success")
+    buttons.data_button("Close", "sel close", style="danger")
     return buttons.build_menu(2)
 
 
@@ -85,7 +85,7 @@ async def get_telegraph_list(telegraph_content):
     if len(path) > 1:
         await telegraph.edit_telegraph(path, telegraph_content)
     buttons = ButtonMaker()
-    buttons.url_button("🔎 VIEW", f"https://telegra.ph/{path[0]}")
+    buttons.url_button("🔎 VIEW", f"https://telegra.ph/{path[0]}", style="primary")
     return buttons.build_menu(1)
 
 

@@ -8,19 +8,22 @@ class ButtonMaker:
         self._header_button = []
         self._footer_button = []
 
+    @staticmethod
+    def _get_style(style):
+        if isinstance(style, ButtonStyle):
+            return style
+        if isinstance(style, str):
+            st = style.lower()
+            if st in ["primary", "blue"]:
+                return ButtonStyle.PRIMARY
+            if st in ["danger", "red"]:
+                return ButtonStyle.DANGER
+            if st in ["success", "green"]:
+                return ButtonStyle.SUCCESS
+        return ButtonStyle.DEFAULT
+
     def url_button(self, key, link, position=None, style=ButtonStyle.DEFAULT):
-        if style not in [
-            ButtonStyle.DEFAULT,
-            ButtonStyle.PRIMARY,
-            ButtonStyle.DANGER,
-            ButtonStyle.SUCCESS,
-        ]:
-            if style.lower() == "blue":
-                style = ButtonStyle.PRIMARY
-            elif style.lower() == "red":
-                style = ButtonStyle.DANGER
-            elif style.lower() == "green":
-                style = ButtonStyle.SUCCESS
+        style = self._get_style(style)
         if not position:
             self._button.append(InlineKeyboardButton(text=key, url=link, style=style))
         elif position == "header":
@@ -33,18 +36,7 @@ class ButtonMaker:
             )
 
     def data_button(self, key, data, position=None, style=ButtonStyle.DEFAULT):
-        if style not in [
-            ButtonStyle.DEFAULT,
-            ButtonStyle.PRIMARY,
-            ButtonStyle.DANGER,
-            ButtonStyle.SUCCESS,
-        ]:
-            if style.lower() == "blue":
-                style = ButtonStyle.PRIMARY
-            elif style.lower() == "red":
-                style = ButtonStyle.DANGER
-            elif style.lower() == "green":
-                style = ButtonStyle.SUCCESS
+        style = self._get_style(style)
         if not position:
             self._button.append(
                 InlineKeyboardButton(text=key, callback_data=data, style=style)

@@ -130,25 +130,25 @@ async def _start_rss_download(
 async def rss_menu(event):
     user_id = event.from_user.id
     buttons = ButtonMaker()
-    buttons.data_button("Subscribe", f"rss sub {user_id}")
-    buttons.data_button("Subscriptions", f"rss list {user_id} 0")
-    buttons.data_button("Get Items", f"rss get {user_id}")
-    buttons.data_button("Edit", f"rss edit {user_id}")
-    buttons.data_button("Pause", f"rss pause {user_id}")
-    buttons.data_button("Resume", f"rss resume {user_id}")
-    buttons.data_button("Unsubscribe", f"rss unsubscribe {user_id}")
+    buttons.data_button("Subscribe", f"rss sub {user_id}", style="success")
+    buttons.data_button("Subscriptions", f"rss list {user_id} 0", style="primary")
+    buttons.data_button("Get Items", f"rss get {user_id}", style="primary")
+    buttons.data_button("Edit", f"rss edit {user_id}", style="primary")
+    buttons.data_button("Pause", f"rss pause {user_id}", style="danger")
+    buttons.data_button("Resume", f"rss resume {user_id}", style="success")
+    buttons.data_button("Unsubscribe", f"rss unsubscribe {user_id}", style="danger")
     if await CustomFilters.sudo("", event):
-        buttons.data_button("All Subscriptions", f"rss listall {user_id} 0")
-        buttons.data_button("Pause All", f"rss allpause {user_id}")
-        buttons.data_button("Resume All", f"rss allresume {user_id}")
-        buttons.data_button("Unsubscribe All", f"rss allunsub {user_id}")
-        buttons.data_button("Delete User", f"rss deluser {user_id}")
-        buttons.data_button("Use This Chat", f"rss setchat {user_id}")
+        buttons.data_button("All Subscriptions", f"rss listall {user_id} 0", style="primary")
+        buttons.data_button("Pause All", f"rss allpause {user_id}", style="danger")
+        buttons.data_button("Resume All", f"rss allresume {user_id}", style="success")
+        buttons.data_button("Unsubscribe All", f"rss allunsub {user_id}", style="danger")
+        buttons.data_button("Delete User", f"rss deluser {user_id}", style="danger")
+        buttons.data_button("Use This Chat", f"rss setchat {user_id}", style="primary")
         if scheduler.running:
-            buttons.data_button("Shutdown Rss", f"rss shutdown {user_id}")
+            buttons.data_button("Shutdown Rss", f"rss shutdown {user_id}", style="danger")
         else:
-            buttons.data_button("Start Rss", f"rss start {user_id}")
-    buttons.data_button("Close", f"rss close {user_id}")
+            buttons.data_button("Start Rss", f"rss start {user_id}", style="success")
+    buttons.data_button("Close", f"rss close {user_id}", style="danger")
     button = buttons.build_menu(2)
     if chat := Config.RSS_CHAT:
         if isinstance(chat, int):
@@ -423,12 +423,12 @@ async def rss_list(query, start, all_users=False):
                     f"<b>Sensitive:</b> <code>{data.get('sensitive', False)}</code>\n"
                 )
                 list_feed += f"<b>Paused:</b> <code>{data['paused']}</code>\n"
-    buttons.data_button("Back", f"rss back {user_id}")
-    buttons.data_button("Close", f"rss close {user_id}")
+    buttons.data_button("Back", f"rss back {user_id}", style="primary")
+    buttons.data_button("Close", f"rss close {user_id}", style="danger")
     if keysCount > 5:
         for x in range(0, keysCount, 5):
             buttons.data_button(
-                f"{int(x / 5)}", f"rss list {user_id} {x}", position="footer"
+                f"{int(x / 5)}", f"rss list {user_id} {x}", position="footer", style="primary"
             )
     button = buttons.build_menu(2)
     if query.message.text.html == list_feed:
@@ -603,8 +603,8 @@ async def rss_listener(client, query):
         await query.answer()
         handler_dict[user_id] = False
         buttons = ButtonMaker()
-        buttons.data_button("Back", f"rss back {user_id}")
-        buttons.data_button("Close", f"rss close {user_id}")
+        buttons.data_button("Back", f"rss back {user_id}", style="primary")
+        buttons.data_button("Close", f"rss close {user_id}", style="danger")
         button = buttons.build_menu(2)
         await edit_message(message, RSS_HELP_MESSAGE, button)
         pfunc = partial(rss_sub, pre_event=query)
@@ -624,8 +624,8 @@ async def rss_listener(client, query):
         else:
             await query.answer()
             buttons = ButtonMaker()
-            buttons.data_button("Back", f"rss back {user_id}")
-            buttons.data_button("Close", f"rss close {user_id}")
+            buttons.data_button("Back", f"rss back {user_id}", style="primary")
+            buttons.data_button("Close", f"rss close {user_id}", style="danger")
             button = buttons.build_menu(2)
             await edit_message(
                 message,
@@ -641,14 +641,14 @@ async def rss_listener(client, query):
         else:
             await query.answer()
             buttons = ButtonMaker()
-            buttons.data_button("Back", f"rss back {user_id}")
+            buttons.data_button("Back", f"rss back {user_id}", style="primary")
             if data[1] == "pause":
-                buttons.data_button("Pause AllMyFeeds", f"rss uallpause {user_id}")
+                buttons.data_button("Pause AllMyFeeds", f"rss uallpause {user_id}", style="danger")
             elif data[1] == "resume":
-                buttons.data_button("Resume AllMyFeeds", f"rss uallresume {user_id}")
+                buttons.data_button("Resume AllMyFeeds", f"rss uallresume {user_id}", style="success")
             elif data[1] == "unsubscribe":
-                buttons.data_button("Unsub AllMyFeeds", f"rss uallunsub {user_id}")
-            buttons.data_button("Close", f"rss close {user_id}")
+                buttons.data_button("Unsub AllMyFeeds", f"rss uallunsub {user_id}", style="danger")
+            buttons.data_button("Close", f"rss close {user_id}", style="danger")
             button = buttons.build_menu(2)
             await edit_message(
                 message,
@@ -664,8 +664,8 @@ async def rss_listener(client, query):
         else:
             await query.answer()
             buttons = ButtonMaker()
-            buttons.data_button("Back", f"rss back {user_id}")
-            buttons.data_button("Close", f"rss close {user_id}")
+            buttons.data_button("Back", f"rss back {user_id}", style="primary")
+            buttons.data_button("Close", f"rss close {user_id}", style="danger")
             button = buttons.build_menu(2)
             msg = """Send one or more rss titles with new filters or command separated by new line.
 Examples:
@@ -738,8 +738,8 @@ Timeout: 60 sec. Argument -c for command and arguments
         else:
             await query.answer()
             buttons = ButtonMaker()
-            buttons.data_button("Back", f"rss back {user_id}")
-            buttons.data_button("Close", f"rss close {user_id}")
+            buttons.data_button("Back", f"rss back {user_id}", style="primary")
+            buttons.data_button("Close", f"rss close {user_id}", style="danger")
             button = buttons.build_menu(2)
             msg = "Send one or more user_id separated by space to delete their resources.\nTimeout: 60 sec."
             await edit_message(message, msg, button)
