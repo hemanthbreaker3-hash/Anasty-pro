@@ -31,8 +31,10 @@ async def send_message(message, text, buttons=None, block=True):
 
 async def send_rich_message(message, rich_input, buttons=None, block=True):
     try:
-        return await message.reply_rich(
-            rich_message=rich_input,
+        client = getattr(message, "_client", TgClient.bot)
+        return await client.send_rich_message(
+            chat_id=message.chat.id,
+            rich_text=rich_input,
             disable_notification=True,
             reply_markup=buttons,
         )
@@ -49,11 +51,20 @@ async def send_rich_message(message, rich_input, buttons=None, block=True):
 
 async def edit_message(message, text=None, buttons=None, block=True, rich_message=None):
     try:
-        return await message.edit(
-            text=text,
-            reply_markup=buttons,
-            rich_message=rich_message,
-        )
+        if rich_message is not None:
+            client = getattr(message, "_client", TgClient.bot)
+            return await client.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.id,
+                text="",
+                rich_text=rich_message,
+                reply_markup=buttons,
+            )
+        else:
+            return await message.edit_text(
+                text=text,
+                reply_markup=buttons,
+            )
     except FloodWait as f:
         LOGGER.warning(str(f))
         if not block:
