@@ -26,6 +26,7 @@ class MirrorStatus:
     STATUS_SEED = "Seed"
     STATUS_SAMVID = "SamVid"
     STATUS_CONVERT = "Convert"
+    STATUS_MERGE = "Merge"
     STATUS_FFMPEG = "FFmpeg"
 
 
