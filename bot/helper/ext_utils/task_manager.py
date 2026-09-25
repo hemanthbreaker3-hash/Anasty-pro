@@ -6,6 +6,8 @@ from ... import (
     non_queued_up,
     non_queued_dl,
     queue_dict_lock,
+    task_dict,
+    task_dict_lock,
     LOGGER,
 )
 from ...core.config_manager import Config
@@ -13,6 +15,27 @@ from ..mirror_leech_utils.gdrive_utils.search import GoogleDriveSearch
 from .bot_utils import sync_to_async, get_telegraph_list
 from .files_utils import get_base_name
 from .links_utils import is_gdrive_id
+
+
+async def user_has_active_task(user_id, current_mid):
+    async with task_dict_lock:
+        for mid, task in task_dict.items():
+            if mid != current_mid and hasattr(task, "listener") and task.listener.user_id == user_id:
+                if task.status() not in ["Queued in download queue", "Queued in upload queue"]:
+                    return True
+    return False
+
+
+async def can_start_queued_task(mid):
+    async with task_dict_lock:
+        task = task_dict.get(mid)
+        if task and hasattr(task, "listener") and task.listener.user_dict.get("SEQUENCE", False):
+            user_id = task.listener.user_id
+            for active_mid, active_task in task_dict.items():
+                if active_mid != mid and hasattr(active_task, "listener") and active_task.listener.user_id == user_id:
+                    if active_task.status() not in ["Queued in download queue", "Queued in upload queue"]:
+                        return False
+    return True
 
 
 async def stop_duplicate_check(listener):
@@ -56,11 +79,17 @@ async def check_running_tasks(listener, state="dl"):
     state_limit = Config.QUEUE_DOWNLOAD if state == "dl" else Config.QUEUE_UPLOAD
     event = None
     is_over_limit = False
+
+    is_sequence = listener.user_dict.get("SEQUENCE", False)
+    if is_sequence and await user_has_active_task(listener.user_id, listener.mid):
+        is_over_limit = True
+
     async with queue_dict_lock:
         if state == "up" and listener.mid in non_queued_dl:
             non_queued_dl.remove(listener.mid)
         if (
-            (all_limit or state_limit)
+            not is_over_limit
+            and (all_limit or state_limit)
             and not listener.force_run
             and not (listener.force_upload and state == "up")
             and not (listener.force_download and state == "dl")
@@ -73,13 +102,14 @@ async def check_running_tasks(listener, state="dl"):
                 and dl_count + up_count >= all_limit
                 and (not state_limit or t_count >= state_limit)
             ) or (state_limit and t_count >= state_limit)
-            if is_over_limit:
-                event = Event()
-                if state == "dl":
-                    queued_dl[listener.mid] = event
-                else:
-                    queued_up[listener.mid] = event
-        if not is_over_limit:
+
+        if is_over_limit:
+            event = Event()
+            if state == "dl":
+                queued_dl[listener.mid] = event
+            else:
+                queued_up[listener.mid] = event
+        else:
             if state == "up":
                 non_queued_up.add(listener.mid)
             else:
@@ -112,12 +142,16 @@ async def start_from_queued():
                 f_tasks = all_limit - all_
                 if queued_up and (not up_limit or up < up_limit):
                     for index, mid in enumerate(list(queued_up.keys()), start=1):
+                        if not await can_start_queued_task(mid):
+                            continue
                         await start_up_from_queued(mid)
                         f_tasks -= 1
                         if f_tasks == 0 or (up_limit and index >= up_limit - up):
                             break
                 if queued_dl and (not dl_limit or dl < dl_limit) and f_tasks != 0:
                     for index, mid in enumerate(list(queued_dl.keys()), start=1):
+                        if not await can_start_queued_task(mid):
+                            continue
                         await start_dl_from_queued(mid)
                         if (dl_limit and index >= dl_limit - dl) or index == f_tasks:
                             break
@@ -129,6 +163,8 @@ async def start_from_queued():
             if queued_up and up < up_limit:
                 f_tasks = up_limit - up
                 for index, mid in enumerate(list(queued_up.keys()), start=1):
+                    if not await can_start_queued_task(mid):
+                        continue
                     await start_up_from_queued(mid)
                     if index == f_tasks:
                         break
@@ -136,6 +172,8 @@ async def start_from_queued():
         async with queue_dict_lock:
             if queued_up:
                 for mid in list(queued_up.keys()):
+                    if not await can_start_queued_task(mid):
+                        continue
                     await start_up_from_queued(mid)
 
     if dl_limit := Config.QUEUE_DOWNLOAD:
@@ -144,6 +182,8 @@ async def start_from_queued():
             if queued_dl and dl < dl_limit:
                 f_tasks = dl_limit - dl
                 for index, mid in enumerate(list(queued_dl.keys()), start=1):
+                    if not await can_start_queued_task(mid):
+                        continue
                     await start_dl_from_queued(mid)
                     if index == f_tasks:
                         break
@@ -151,4 +191,6 @@ async def start_from_queued():
         async with queue_dict_lock:
             if queued_dl:
                 for mid in list(queued_dl.keys()):
+                    if not await can_start_queued_task(mid):
+                        continue
                     await start_dl_from_queued(mid)

@@ -322,16 +322,27 @@ async def join_files(opath):
 
 
 async def split_file(f_path, split_size, listener):
-    out_path = f"{f_path}."
+    split_mode = listener.user_dict.get("LEECH_SPLIT_MODE", "part")
+    dir_path, file_name = ospath.split(f_path)
+    base_name, extension = ospath.splitext(file_name)
+
+    if split_mode == "number":
+        out_prefix = ospath.join(dir_path, f"{base_name}.")
+        add_suffix = extension
+    else:
+        out_prefix = ospath.join(dir_path, f"{base_name}.part")
+        add_suffix = extension
+
     if listener.is_cancelled:
         return False
     listener.subproc = await create_subprocess_exec(
         "split",
         "--numeric-suffixes=1",
         "--suffix-length=3",
+        f"--additional-suffix={add_suffix}",
         f"--bytes={split_size}",
         f_path,
-        out_path,
+        out_prefix,
         stderr=PIPE,
     )
     _, stderr = await listener.subproc.communicate()

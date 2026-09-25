@@ -696,6 +696,92 @@ class TaskConfig:
                 f"Reply to text file or to telegram message that have links separated by new line! {e}",
             )
 
+    async def proceed_auto_merge(self, dl_path, gid):
+        auto_merge = self.user_dict.get("AUTO_MERGE", False)
+        if not auto_merge:
+            return dl_path
+        video_files = []
+        if self.is_file:
+            is_video, _, _ = await get_document_type(dl_path)
+            if is_video:
+                video_files.append(dl_path)
+        else:
+            walk_data = await sync_to_async(lambda: list(walk(dl_path, topdown=False)))
+            for dirpath, _, files in natsorted(walk_data):
+                for file_ in natsorted(files):
+                    f_path = ospath.join(dirpath, file_)
+                    is_video, _, _ = await get_document_type(f_path)
+                    if is_video:
+                        video_files.append(f_path)
+        if len(video_files) <= 1:
+            return dl_path
+
+        base_folder = dl_path if not self.is_file else ospath.dirname(dl_path)
+        source_name = ospath.basename(dl_path)
+        base_name, _ = ospath.splitext(source_name)
+        out_filename = f"{base_name}.mkv"
+        out_path = ospath.join(base_folder, out_filename)
+
+        concat_txt_path = ospath.join(base_folder, "merge_list.txt")
+        txt_content = ""
+        for vf in video_files:
+            txt_content += f"file '{ffconcat_escape(vf)}'\n"
+
+        async with aiopen(concat_txt_path, "w") as f:
+            await f.write(txt_content)
+
+        ffmpeg = FFMpeg(self)
+        async with task_dict_lock:
+            task_dict[self.mid] = FFmpegStatus(self, ffmpeg, gid, "Merge")
+
+        cmd = [
+            "taskset",
+            "-c",
+            f"{cores}",
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-progress",
+            "pipe:1",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_txt_path,
+            "-c",
+            "copy",
+            "-threads",
+            f"{threads}",
+            out_path,
+        ]
+
+        self.progress = False
+        async with cpu_eater_lock:
+            self.progress = True
+            LOGGER.info(f"Merging videos for: {source_name}")
+            self.subsize = sum([(await get_path_size(vf)) for vf in video_files])
+            res = await ffmpeg.ffmpeg_cmds(cmd, video_files)
+
+        if await aiopath.exists(concat_txt_path):
+            await remove(concat_txt_path)
+
+        if res and await aiopath.exists(out_path):
+            keep_original = self.user_dict.get("KEEP_ORIGINAL", False)
+            if not keep_original:
+                for vf in video_files:
+                    if vf != out_path and await aiopath.exists(vf):
+                        try:
+                            await remove(vf)
+                        except Exception as e:
+                            LOGGER.error(f"Failed to remove original file {vf}: {e}")
+            if self.is_file:
+                self.is_file = True
+                return out_path
+            return dl_path
+        return dl_path
+
     async def proceed_extract(self, dl_path, gid):
         pswd = self.extract if isinstance(self.extract, str) else ""
         self.files_to_proceed = []

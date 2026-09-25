@@ -1,9 +1,11 @@
+import json
+import zipfile
 from aiofiles.os import remove, path as aiopath, makedirs
 from asyncio import sleep
 from functools import partial
 from html import escape
 from io import BytesIO
-from os import getcwd
+from os import getcwd, path as ospath, walk
 from pyrogram.filters import create
 from pyrogram.handlers import MessageHandler
 from time import time
@@ -44,6 +46,7 @@ leech_options = [
     "THUMBNAIL_LAYOUT",
     "CLONE_DUMP_CHATS",
 ]
+video_tools_options = ["AUTO_MERGE", "KEEP_ORIGINAL"]
 rclone_options = ["RCLONE_CONFIG", "RCLONE_PATH", "RCLONE_FLAGS"]
 gdrive_options = ["TOKEN_PICKLE", "GDRIVE_ID", "INDEX_URL"]
 uploaders_options = ["BUZZHEAVIER_ACCOUNT_ID", "BUZZHEAVIER_FOLDER_ID"]
@@ -61,8 +64,9 @@ async def get_user_settings(from_user, stype="main"):
         thumbpath = f"thumbnails/{user_id}.jpg"
         buttons.data_button("Thumbnail", f"userset {user_id} menu THUMBNAIL")
         thumbmsg = "Exists" if await aiopath.exists(thumbpath) else "Not Exists"
+        split_mode = user_dict.get("LEECH_SPLIT_MODE", "part")
         buttons.data_button(
-            "Leech Split Size", f"userset {user_id} menu LEECH_SPLIT_SIZE"
+            f"Split ({split_mode.title()})", f"userset {user_id} menu LEECH_SPLIT_SIZE"
         )
         if user_dict.get("LEECH_SPLIT_SIZE", False):
             split_size = user_dict["LEECH_SPLIT_SIZE"]
@@ -195,6 +199,14 @@ async def get_user_settings(from_user, stype="main"):
             cdc = Config.CLONE_DUMP_CHATS
         else:
             cdc = "None"
+
+        if user_dict.get("SEQUENCE", False):
+            seq_status = "Enabled"
+            buttons.data_button("Disable Sequence", f"userset {user_id} tog SEQUENCE f")
+        else:
+            seq_status = "Disabled"
+            buttons.data_button("Enable Sequence", f"userset {user_id} tog SEQUENCE t")
+
         buttons.data_button("Back", f"userset {user_id} back")
         buttons.data_button("Close", f"userset {user_id} close")
 
@@ -211,6 +223,8 @@ Leech by <b>{leech_method}</b> session
 Hybrid Leech is <b>{hybrid_leech}</b>
 Thumbnail Layout is <b>{thumb_layout}</b>
 Files Links is <b>{fl}</b>
+Split Mode is <b>{split_mode.title()}</b>
+Sequence is <b>{seq_status}</b>
 """
     elif stype == "rclone":
         buttons.data_button("Rclone Config", f"userset {user_id} menu RCLONE_CONFIG")
@@ -270,6 +284,28 @@ Gdrive Token <b>{tokenmsg}</b>
 Gdrive ID is <code>{gdrive_id}</code>
 Index URL is <code>{index}</code>
 Stop Duplicate is <b>{sd_msg}</b>"""
+    elif stype == "vtools":
+        auto_merge = user_dict.get("AUTO_MERGE", False)
+        if auto_merge:
+            buttons.data_button("Disable Auto Merge", f"userset {user_id} tog AUTO_MERGE f")
+            keep_orig = user_dict.get("KEEP_ORIGINAL", False)
+            if keep_orig:
+                buttons.data_button("Disable Keep Original", f"userset {user_id} tog KEEP_ORIGINAL f")
+            else:
+                buttons.data_button("Enable Keep Original", f"userset {user_id} tog KEEP_ORIGINAL t")
+            am_msg = "Enabled"
+            ko_msg = "Enabled" if keep_orig else "Disabled"
+        else:
+            buttons.data_button("Enable Auto Merge", f"userset {user_id} tog AUTO_MERGE t")
+            am_msg = "Disabled"
+            ko_msg = "N/A"
+
+        buttons.data_button("Back", f"userset {user_id} back")
+        buttons.data_button("Close", f"userset {user_id} close")
+
+        text = f"""<u>Video Tools Settings for {name}</u>
+Auto Merge is <b>{am_msg}</b>
+Keep Original Files is <b>{ko_msg}</b>"""
     elif stype == "uploaders":
         buttons.data_button(
             "Buzzheavier Account ID", f"userset {user_id} menu BUZZHEAVIER_ACCOUNT_ID"
@@ -292,9 +328,12 @@ Buzzheavier Account ID: {bh_acc}
 Buzzheavier Folder ID: {bh_fol}"""
     else:
         buttons.data_button("Leech", f"userset {user_id} leech")
+        buttons.data_button("Video Tools", f"userset {user_id} vtools")
         buttons.data_button("Rclone", f"userset {user_id} rclone")
         buttons.data_button("Gdrive API", f"userset {user_id} gdrive")
         buttons.data_button("Uploaders", f"userset {user_id} uploaders")
+        buttons.data_button("Export Settings", f"userset {user_id} export")
+        buttons.data_button("Import Settings", f"userset {user_id} import")
 
         upload_paths = user_dict.get("UPLOAD_PATHS", {})
         if not upload_paths and "UPLOAD_PATHS" not in user_dict and Config.UPLOAD_PATHS:
@@ -526,6 +565,10 @@ async def get_menu(option, message, user_id):
     else:
         key = "set"
     buttons.data_button("Set", f"userset {user_id} {key} {option}")
+    if option == "LEECH_SPLIT_SIZE":
+        split_mode = user_dict.get("LEECH_SPLIT_MODE", "part")
+        new_mode = "number" if split_mode == "part" else "part"
+        buttons.data_button(f"Switch Mode to {new_mode.title()}", f"userset {user_id} splitmode {new_mode}")
     if option in user_dict and key != "file":
         buttons.data_button("Reset", f"userset {user_id} reset {option}")
     buttons.data_button("Remove", f"userset {user_id} remove {option}")
@@ -675,9 +718,20 @@ async def edit_user_settings(client, query):
         await query.answer("Not Yours!", show_alert=True)
     elif data[2] == "setevent":
         await query.answer()
-    elif data[2] in ["leech", "gdrive", "rclone", "uploaders"]:
+    elif data[2] in ["leech", "vtools", "gdrive", "rclone", "uploaders"]:
         await query.answer()
         await update_user_settings(query, data[2])
+    elif data[2] == "splitmode":
+        await query.answer()
+        update_user_ldata(user_id, "LEECH_SPLIT_MODE", data[3])
+        await database.update_user_data(user_id)
+        await get_menu("LEECH_SPLIT_SIZE", message, user_id)
+    elif data[2] == "export":
+        await query.answer()
+        await export_user_settings(client, query)
+    elif data[2] == "import":
+        await query.answer()
+        await import_user_settings(client, query)
     elif data[2] == "menu":
         await query.answer()
         await get_menu(data[3], message, user_id)
@@ -686,6 +740,8 @@ async def edit_user_settings(client, query):
         update_user_ldata(user_id, data[3], data[4] == "t")
         if data[3] == "STOP_DUPLICATE":
             back_to = "gdrive"
+        elif data[3] in ["AUTO_MERGE", "KEEP_ORIGINAL"]:
+            back_to = "vtools"
         elif data[3] == "USER_TOKENS":
             back_to = "main"
         else:
@@ -803,6 +859,83 @@ async def edit_user_settings(client, query):
         await query.answer()
         await delete_message(message.reply_to_message)
         await delete_message(message)
+
+
+@new_task
+async def export_user_settings(client, query):
+    user_id = query.from_user.id
+    user_dict = user_data.get(user_id, {})
+    zip_path = f"Settings_{user_id}.zip"
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("user_data.json", json.dumps(user_dict, indent=2))
+            thumbpath = f"thumbnails/{user_id}.jpg"
+            if await aiopath.exists(thumbpath):
+                zf.write(thumbpath, f"thumbnails/{user_id}.jpg")
+            rclone_conf = f"rclone/{user_id}.conf"
+            if await aiopath.exists(rclone_conf):
+                zf.write(rclone_conf, f"rclone/{user_id}.conf")
+            token_pickle = f"tokens/{user_id}.pickle"
+            if await aiopath.exists(token_pickle):
+                zf.write(token_pickle, f"tokens/{user_id}.pickle")
+        await send_file(query.message, zip_path, f"Settings for {query.from_user.mention}")
+    except Exception as e:
+        await send_message(query.message, f"Export failed: {e}")
+    finally:
+        if await aiopath.exists(zip_path):
+            await remove(zip_path)
+
+
+@new_task
+async def import_user_settings(client, query):
+    user_id = query.from_user.id
+    buttons = ButtonMaker()
+    buttons.data_button("Back", f"userset {user_id} setevent")
+    buttons.data_button("Close", f"userset {user_id} close")
+    text = "Please upload your settings ZIP file (`Settings_<USER_ID>.zip`). Timeout: 60 sec"
+    await edit_message(query.message, text, buttons.build_menu(2))
+
+    async def process_import(_, message):
+        handler_dict[user_id] = False
+        if not message.document or not message.document.file_name.endswith(".zip"):
+            await send_message(message, "Invalid file! Please upload a valid ZIP file.")
+            return
+        dl_path = await message.download()
+        try:
+            with zipfile.ZipFile(dl_path, "r") as zf:
+                file_list = zf.namelist()
+                if "user_data.json" not in file_list:
+                    await send_message(message, "Invalid settings ZIP archive! Missing user_data.json.")
+                    return
+                data = json.loads(zf.read("user_data.json").decode("utf-8"))
+                user_data[user_id] = data
+                await database.update_user_data(user_id)
+
+                if f"thumbnails/{user_id}.jpg" in file_list:
+                    await makedirs("thumbnails", exist_ok=True)
+                    zf.extract(f"thumbnails/{user_id}.jpg", ".")
+                    await database.update_user_doc(user_id, "THUMBNAIL", f"thumbnails/{user_id}.jpg")
+
+                if f"rclone/{user_id}.conf" in file_list:
+                    await makedirs("rclone", exist_ok=True)
+                    zf.extract(f"rclone/{user_id}.conf", ".")
+                    await database.update_user_doc(user_id, "RCLONE_CONFIG", f"rclone/{user_id}.conf")
+
+                if f"tokens/{user_id}.pickle" in file_list:
+                    await makedirs("tokens", exist_ok=True)
+                    zf.extract(f"tokens/{user_id}.pickle", ".")
+                    await database.update_user_doc(user_id, "TOKEN_PICKLE", f"tokens/{user_id}.pickle")
+
+            await send_message(message, "Settings imported and restored successfully!")
+        except Exception as e:
+            await send_message(message, f"Import failed: {e}")
+        finally:
+            if await aiopath.exists(dl_path):
+                await remove(dl_path)
+            await delete_message(message)
+
+    await event_handler(client, query, process_import, document=True)
+    await update_user_settings(query)
 
 
 @new_task

@@ -670,8 +670,14 @@ class FFMpeg:
         split_size -= 3000000
         start_time = 0
         i = 1
+        split_mode = self._listener.user_dict.get("LEECH_SPLIT_MODE", "part")
+        dir_path = ospath.dirname(f_path)
         while i <= parts or start_time < duration - 4:
-            out_path = f_path.replace(file_, f"{base_name}.part{i:03}{extension}")
+            if split_mode == "number":
+                out_filename = f"{base_name}.{i:03}{extension}"
+            else:
+                out_filename = f"{base_name}.part{i:03}{extension}"
+            out_path = ospath.join(dir_path, out_filename)
             cmd = [
                 "taskset",
                 "-c",

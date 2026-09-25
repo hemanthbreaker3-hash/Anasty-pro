@@ -30,8 +30,9 @@ def buzzheavier_module(monkeypatch):
     mlu_pkg = ModuleType("bot.helper.mirror_leech_utils")
     # Real on-disk path so importlib can locate
     # ``buzzheavier_uploader`` relative to the package.
-    mlu_pkg.__path__ = [
-        str(Path(__file__).resolve().parent.parent / "bot" / "helper" / "mirror_leech_utils")
+    upload_pkg = ModuleType("bot.helper.mirror_leech_utils.upload_utils")
+    upload_pkg.__path__ = [
+        str(Path(__file__).resolve().parent.parent / "bot" / "helper" / "mirror_leech_utils" / "upload_utils")
     ]
 
     monkeypatch.setitem(sys.modules, "bot", bot_pkg)
@@ -39,12 +40,13 @@ def buzzheavier_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "bot.core.config_manager", config_manager)
     monkeypatch.setitem(sys.modules, "bot.helper", helper_pkg)
     monkeypatch.setitem(sys.modules, "bot.helper.mirror_leech_utils", mlu_pkg)
+    monkeypatch.setitem(sys.modules, "bot.helper.mirror_leech_utils.upload_utils", upload_pkg)
 
     sys.modules.pop(
-        "bot.helper.mirror_leech_utils.buzzheavier_uploader", None
+        "bot.helper.mirror_leech_utils.upload_utils.buzzheavier_uploader", None
     )
     return importlib.import_module(
-        "bot.helper.mirror_leech_utils.buzzheavier_uploader"
+        "bot.helper.mirror_leech_utils.upload_utils.buzzheavier_uploader"
     )
 
 

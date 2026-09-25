@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# One-click deployment script for VPS (deploy.vps)
+
+set -e
+
+echo "=== Starting VPS Deployment ==="
+
+# Update system package lists
+sudo apt-get update -y
+
+# Install required system dependencies
+sudo apt-get install -y python3 python3-pip python3-venv ffmpeg aria2 qbittorrent-nox 7zip rclone git
+
+# Create virtual environment if it does not exist
+if [ ! -d "mltbenv" ]; then
+    echo "Creating Python virtual environment..."
+    python3 -m venv mltbenv
+fi
+
+# Activate virtual environment
+source mltbenv/bin/activate
+
+# Upgrade pip and install wheel
+pip install --upgrade pip setuptools wheel
+
+# Install Python requirements
+if [ -f "requirements.txt" ]; then
+    echo "Installing Python dependencies..."
+    pip install -r requirements.txt
+fi
+
+# Run update and start bot
+echo "Starting application..."
+bash start.sh
