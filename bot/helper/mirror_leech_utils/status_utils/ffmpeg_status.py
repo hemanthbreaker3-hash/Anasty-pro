@@ -44,6 +44,8 @@ class FFmpegStatus:
             return MirrorStatus.STATUS_SAMVID
         elif self._cstatus == "Merge":
             return MirrorStatus.STATUS_MERGE
+        elif self._cstatus == "Metadata":
+            return MirrorStatus.STATUS_METADATA
         else:
             return MirrorStatus.STATUS_FFMPEG
 

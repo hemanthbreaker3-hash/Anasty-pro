@@ -398,24 +398,33 @@ class FFMpeg:
         indices = [
             index
             for index, item in enumerate(ffmpeg)
-            if (item.startswith("mltb") or item == "mltb") and item != "mltb.txt"
+            if (ospath.basename(item).startswith("mltb") or item == "mltb")
+            and ospath.basename(item) != "mltb.txt"
         ]
         outputs = []
         for index in indices:
             output_file = ffmpeg[index]
-            if output_file != "mltb" and output_file.startswith("mltb"):
-                bo, oext = ospath.splitext(output_file)
+            out_dir, out_file = ospath.split(output_file)
+            out_dir = out_dir or dir
+            if out_file != "mltb" and out_file.startswith("mltb"):
+                bo, oext = ospath.splitext(out_file)
                 if oext:
                     if isinstance(f_path, list) or ext != oext:
                         prefix = ""
                     else:
                         prefix = f"ffmpeg{index}." if bo == "mltb" else ""
-                    ext = ""
+                    ext_str = ""
                 else:
                     prefix = ""
+                    ext_str = ext
+                replaced_name = (
+                    out_file.replace("mltb", base_name) if bo == "mltb" else out_file
+                )
             else:
                 prefix = f"ffmpeg{index}."
-            output = f"{dir}/{prefix}{output_file.replace("mltb", base_name)}{ext}"
+                ext_str = ext
+                replaced_name = out_file.replace("mltb", base_name)
+            output = f"{out_dir}/{prefix}{replaced_name}{ext_str}"
             outputs.append(output)
             ffmpeg[index] = output
         if self._listener.is_cancelled:

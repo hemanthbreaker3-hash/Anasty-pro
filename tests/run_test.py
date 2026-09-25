@@ -9,15 +9,34 @@ sys.modules["aiofiles"] = ModuleType("aiofiles")
 aiofiles_os = ModuleType("aiofiles.os")
 aiofiles_os.makedirs = lambda *args, **kwargs: None
 aiofiles_os.remove = lambda *args, **kwargs: None
+aiofiles_os.listdir = lambda *args, **kwargs: []
+aiofiles_os.stat = lambda *args, **kwargs: None
+aiofiles_os.rmdir = lambda *args, **kwargs: None
+aiofiles_os.rename = lambda *args, **kwargs: None
+aiofiles_os.readlink = lambda *args, **kwargs: None
+aiofiles_os.symlink = lambda *args, **kwargs: None
+aiofiles_os.path = ModuleType("aiofiles.os.path")
 sys.modules["aiofiles.os"] = aiofiles_os
+sys.modules["aiofiles.os.path"] = aiofiles_os.path
 
 aioshutil_mod = ModuleType("aioshutil")
 aioshutil_mod.rmtree = lambda *args, **kwargs: None
+aioshutil_mod.move = lambda *args, **kwargs: None
 sys.modules["aioshutil"] = aioshutil_mod
 
 httpx_mod = ModuleType("httpx")
 httpx_mod.AsyncClient = ModuleType("httpx.AsyncClient")
 sys.modules["httpx"] = httpx_mod
+
+magic_mod = ModuleType("magic")
+magic_mod.Magic = lambda *args, **kwargs: None
+sys.modules["magic"] = magic_mod
+
+pil_mod = ModuleType("PIL")
+pil_image_mod = ModuleType("PIL.Image")
+pil_mod.Image = pil_image_mod
+sys.modules["PIL"] = pil_mod
+sys.modules["PIL.Image"] = pil_image_mod
 
 # 2. Setup paths
 project_root = os.getcwd()
@@ -41,6 +60,9 @@ class _Logger:
 
 
 bot_pkg.LOGGER = _Logger()
+bot_pkg.DOWNLOAD_DIR = "/app/downloads/"
+bot_pkg.threads = 4
+bot_pkg.cores = "0-3"
 bot_pkg.task_dict = {}
 bot_pkg.task_dict_lock = None
 
@@ -55,14 +77,21 @@ class Config:
 
 config_manager.Config = Config
 
+torrent_manager_mod = ModuleType("bot.core.torrent_manager")
+torrent_manager_mod.TorrentManager = ModuleType("bot.core.torrent_manager.TorrentManager")
+sys.modules["bot.core.torrent_manager"] = torrent_manager_mod
+
 helper_pkg = ModuleType("bot.helper")
 helper_pkg.__path__ = []
 
 ext_utils_pkg = ModuleType("bot.helper.ext_utils")
-ext_utils_pkg.__path__ = []
+ext_utils_pkg.__path__ = [
+    os.path.join(project_root, "bot", "helper", "ext_utils")
+]
 
 bot_utils_mod = ModuleType("bot.helper.ext_utils.bot_utils")
 bot_utils_mod.cmd_exec = lambda *args, **kwargs: (b"", b"", 0)
+bot_utils_mod.sync_to_async = lambda func, *args, **kwargs: func(*args, **kwargs)
 
 import re
 
@@ -113,15 +142,28 @@ status_utils_mod = ModuleType("bot.helper.ext_utils.status_utils")
 
 class MirrorStatus:
     STATUS_DOWNLOAD = "Downloading"
+    STATUS_METADATA = "Applying Metadata"
+    STATUS_MERGE = "Merging"
+    STATUS_CONVERT = "Converting"
+    STATUS_SPLIT = "Splitting"
+    STATUS_SAMVID = "SamVid"
+    STATUS_FFMPEG = "FFmpeg"
 
 
 status_utils_mod.MirrorStatus = MirrorStatus
+status_utils_mod.get_readable_file_size = lambda x: "10MB"
+status_utils_mod.get_readable_time = lambda x: "10s"
+status_utils_mod.time_to_seconds = lambda x: 0
 
 mlu_pkg = ModuleType("bot.helper.mirror_leech_utils")
-mlu_pkg.__path__ = []
+mlu_pkg.__path__ = [
+    os.path.join(project_root, "bot", "helper", "mirror_leech_utils")
+]
 
 status_utils_dir = ModuleType("bot.helper.mirror_leech_utils.status_utils")
-status_utils_dir.__path__ = []
+status_utils_dir.__path__ = [
+    os.path.join(project_root, "bot", "helper", "mirror_leech_utils", "status_utils")
+]
 
 queue_status_mod = ModuleType(
     "bot.helper.mirror_leech_utils.status_utils.queue_status"
